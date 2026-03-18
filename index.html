@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic-Tac-Toe</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      letter-spacing: 2px;
+      color: #e94560;
+    }
+
+    .mode-select {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .mode-btn {
+      padding: 0.5rem 1.2rem;
+      border: 2px solid #e94560;
+      border-radius: 8px;
+      background: transparent;
+      color: #eee;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .mode-btn.active, .mode-btn:hover {
+      background: #e94560;
+      color: #fff;
+    }
+
+    .status {
+      font-size: 1.2rem;
+      margin-bottom: 1.2rem;
+      min-height: 1.8rem;
+      color: #a8dadc;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 110px);
+      grid-template-rows: repeat(3, 110px);
+      gap: 8px;
+    }
+
+    .cell {
+      width: 110px;
+      height: 110px;
+      background: #16213e;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      cursor: pointer;
+      border: 2px solid #0f3460;
+      transition: background 0.15s, transform 0.1s;
+      user-select: none;
+    }
+
+    .cell:hover:not(.taken) {
+      background: #0f3460;
+      transform: scale(1.04);
+    }
+
+    .cell.taken {
+      cursor: default;
+    }
+
+    .cell.x {
+      color: #e94560;
+    }
+
+    .cell.o {
+      color: #a8dadc;
+    }
+
+    .cell.winner {
+      background: #0f3460;
+      border-color: #e94560;
+      animation: pulse 0.5s ease-in-out;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+
+    .controls {
+      margin-top: 1.5rem;
+      display: flex;
+      gap: 1rem;
+    }
+
+    .btn {
+      padding: 0.6rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      background: #e94560;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn:hover {
+      background: #c73652;
+    }
+
+    .score {
+      display: flex;
+      gap: 2rem;
+      margin-top: 1.2rem;
+      font-size: 1rem;
+      color: #a8dadc;
+    }
+
+    .score span {
+      text-align: center;
+    }
+
+    .score .val {
+      display: block;
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #eee;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tic-Tac-Toe</h1>
+
+  <div class="mode-select">
+    <button class="mode-btn active" id="btnPvP">2 Spieler</button>
+    <button class="mode-btn" id="btnPvAI">Gegen KI</button>
+  </div>
+
+  <div class="status" id="status">Spieler X ist dran</div>
+
+  <div class="board" id="board">
+    <div class="cell" data-i="0"></div>
+    <div class="cell" data-i="1"></div>
+    <div class="cell" data-i="2"></div>
+    <div class="cell" data-i="3"></div>
+    <div class="cell" data-i="4"></div>
+    <div class="cell" data-i="5"></div>
+    <div class="cell" data-i="6"></div>
+    <div class="cell" data-i="7"></div>
+    <div class="cell" data-i="8"></div>
+  </div>
+
+  <div class="score">
+    <span>X<span class="val" id="scoreX">0</span></span>
+    <span>Unent.<span class="val" id="scoreDraw">0</span></span>
+    <span>O<span class="val" id="scoreO">0</span></span>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="btnReset">Neues Spiel</button>
+    <button class="btn" id="btnResetScore">Score reset</button>
+  </div>
+
+  <script>
+    const WINS = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
+    ];
+
+    let board = Array(9).fill(null);
+    let current = 'X';
+    let gameOver = false;
+    let vsAI = false;
+    let score = { X: 0, O: 0, draw: 0 };
+
+    const cells = document.querySelectorAll('.cell');
+    const statusEl = document.getElementById('status');
+    const scoreX = document.getElementById('scoreX');
+    const scoreO = document.getElementById('scoreO');
+    const scoreDraw = document.getElementById('scoreDraw');
+
+    document.getElementById('btnPvP').addEventListener('click', () => setMode(false));
+    document.getElementById('btnPvAI').addEventListener('click', () => setMode(true));
+    document.getElementById('btnReset').addEventListener('click', resetGame);
+    document.getElementById('btnResetScore').addEventListener('click', resetScore);
+
+    cells.forEach(cell => {
+      cell.addEventListener('click', () => handleClick(parseInt(cell.dataset.i)));
+    });
+
+    function setMode(ai) {
+      vsAI = ai;
+      document.getElementById('btnPvP').classList.toggle('active', !ai);
+      document.getElementById('btnPvAI').classList.toggle('active', ai);
+      resetGame();
+    }
+
+    function handleClick(i) {
+      if (gameOver || board[i]) return;
+      if (vsAI && current === 'O') return;
+      makeMove(i);
+      if (!gameOver && vsAI && current === 'O') {
+        setTimeout(aiMove, 350);
+      }
+    }
+
+    function makeMove(i) {
+      board[i] = current;
+      const cell = cells[i];
+      cell.textContent = current;
+      cell.classList.add('taken', current.toLowerCase());
+
+      const winLine = checkWin(current);
+      if (winLine) {
+        winLine.forEach(idx => cells[idx].classList.add('winner'));
+        statusEl.textContent = vsAI
+          ? (current === 'X' ? 'Du gewinnst! 🎉' : 'KI gewinnt! 🤖')
+          : `Spieler ${current} gewinnt! 🎉`;
+        score[current]++;
+        updateScore();
+        gameOver = true;
+        return;
+      }
+
+      if (board.every(v => v)) {
+        statusEl.textContent = 'Unentschieden!';
+        score.draw++;
+        updateScore();
+        gameOver = true;
+        return;
+      }
+
+      current = current === 'X' ? 'O' : 'X';
+      statusEl.textContent = vsAI
+        ? (current === 'X' ? 'Du bist dran (X)' : 'KI denkt...')
+        : `Spieler ${current} ist dran`;
+    }
+
+    function checkWin(player) {
+      return WINS.find(line => line.every(i => board[i] === player)) || null;
+    }
+
+    function aiMove() {
+      const move = bestMove();
+      makeMove(move);
+    }
+
+    function bestMove() {
+      // Try to win
+      for (let i = 0; i < 9; i++) {
+        if (!board[i]) {
+          board[i] = 'O';
+          if (checkWin('O')) { board[i] = null; return i; }
+          board[i] = null;
+        }
+      }
+      // Block player
+      for (let i = 0; i < 9; i++) {
+        if (!board[i]) {
+          board[i] = 'X';
+          if (checkWin('X')) { board[i] = null; return i; }
+          board[i] = null;
+        }
+      }
+      // Take center
+      if (!board[4]) return 4;
+      // Take corner
+      const corners = [0, 2, 6, 8].filter(i => !board[i]);
+      if (corners.length) return corners[Math.floor(Math.random() * corners.length)];
+      // Take any
+      const free = board.map((v, i) => v ? null : i).filter(v => v !== null);
+      return free[Math.floor(Math.random() * free.length)];
+    }
+
+    function resetGame() {
+      board = Array(9).fill(null);
+      current = 'X';
+      gameOver = false;
+      cells.forEach(cell => {
+        cell.textContent = '';
+        cell.className = 'cell';
+      });
+      statusEl.textContent = vsAI ? 'Du bist dran (X)' : 'Spieler X ist dran';
+    }
+
+    function resetScore() {
+      score = { X: 0, O: 0, draw: 0 };
+      updateScore();
+      resetGame();
+    }
+
+    function updateScore() {
+      scoreX.textContent = score.X;
+      scoreO.textContent = score.O;
+      scoreDraw.textContent = score.draw;
+    }
+  </script>
+</body>
+</html>
