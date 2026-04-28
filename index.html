@@ -3,320 +3,600 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tic-Tac-Toe</title>
+  <title>Stefan Ponitz</title>
   <style>
-    * {
+    *, *::before, *::after {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
 
+    :root {
+      --accent: #2563eb;
+      --accent-light: #eff6ff;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --bg: #ffffff;
+      --section-bg: #f9fafb;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #1a1a2e;
-      color: #eee;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0;
+      width: 100%;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+    }
+
+    .nav-inner {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 0 2rem;
+      height: 60px;
       display: flex;
-      flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--text);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--muted);
+      font-size: 0.95rem;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--accent);
+    }
+
+    /* HERO */
+    .hero {
       min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 80px 2rem 4rem;
     }
 
-    h1 {
-      font-size: 2.5rem;
-      margin-bottom: 0.5rem;
-      letter-spacing: 2px;
-      color: #e94560;
+    .hero-inner {
+      max-width: 1000px;
+      margin: 0 auto;
+      width: 100%;
     }
 
-    .mode-select {
+    .hero-tag {
+      display: inline-block;
+      background: var(--accent-light);
+      color: var(--accent);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.3rem 0.8rem;
+      border-radius: 999px;
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.04em;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 1.2rem;
+    }
+
+    .hero h1 span {
+      color: var(--accent);
+    }
+
+    .hero-sub {
+      font-size: 1.2rem;
+      color: var(--muted);
+      max-width: 560px;
+      margin-bottom: 2.5rem;
+    }
+
+    .hero-cta {
       display: flex;
       gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      padding: 0.75rem 1.75rem;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn-primary:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+
+    .btn-outline {
+      padding: 0.75rem 1.75rem;
+      background: transparent;
+      color: var(--text);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-outline:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* SECTIONS */
+    section {
+      padding: 6rem 2rem;
+    }
+
+    section:nth-child(even) {
+      background: var(--section-bg);
+    }
+
+    .section-inner {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+
+    .section-title {
+      font-size: clamp(1.8rem, 3vw, 2.4rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
       margin-bottom: 1.5rem;
     }
 
-    .mode-btn {
-      padding: 0.5rem 1.2rem;
-      border: 2px solid #e94560;
-      border-radius: 8px;
-      background: transparent;
-      color: #eee;
-      cursor: pointer;
-      font-size: 0.95rem;
-      transition: background 0.2s, color 0.2s;
-    }
-
-    .mode-btn.active, .mode-btn:hover {
-      background: #e94560;
-      color: #fff;
-    }
-
-    .status {
-      font-size: 1.2rem;
-      margin-bottom: 1.2rem;
-      min-height: 1.8rem;
-      color: #a8dadc;
-    }
-
-    .board {
+    /* ÜBER MICH */
+    .about-grid {
       display: grid;
-      grid-template-columns: repeat(3, 110px);
-      grid-template-rows: repeat(3, 110px);
-      gap: 8px;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: start;
     }
 
-    .cell {
-      width: 110px;
-      height: 110px;
-      background: #16213e;
+    .about-text p {
+      color: var(--muted);
+      margin-bottom: 1rem;
+      font-size: 1.05rem;
+    }
+
+    .about-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .stat-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
       border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .stat-card .number {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -0.03em;
+    }
+
+    .stat-card .label {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+    }
+
+    /* SKILLS */
+    .skills-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+
+    .skill-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.75rem;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+
+    .skill-card:hover {
+      box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+      transform: translateY(-2px);
+    }
+
+    .skill-icon {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .skill-card h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .skill-card p {
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .skill-tags {
       display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 3rem;
-      cursor: pointer;
-      border: 2px solid #0f3460;
-      transition: background 0.15s, transform 0.1s;
-      user-select: none;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 1rem;
     }
 
-    .cell:hover:not(.taken) {
-      background: #0f3460;
-      transform: scale(1.04);
+    .tag {
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--accent-light);
+      color: var(--accent);
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
     }
 
-    .cell.taken {
-      cursor: default;
+    /* KONTAKT */
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: start;
     }
 
-    .cell.x {
-      color: #e94560;
+    .contact-info p {
+      color: var(--muted);
+      margin-bottom: 2rem;
+      font-size: 1.05rem;
     }
 
-    .cell.o {
-      color: #a8dadc;
-    }
-
-    .cell.winner {
-      background: #0f3460;
-      border-color: #e94560;
-      animation: pulse 0.5s ease-in-out;
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.08); }
-      100% { transform: scale(1); }
-    }
-
-    .controls {
-      margin-top: 1.5rem;
+    .contact-links {
       display: flex;
+      flex-direction: column;
       gap: 1rem;
     }
 
-    .btn {
-      padding: 0.6rem 1.5rem;
-      border: none;
-      border-radius: 8px;
-      background: #e94560;
-      color: #fff;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .btn:hover {
-      background: #c73652;
-    }
-
-    .score {
+    .contact-link {
       display: flex;
-      gap: 2rem;
-      margin-top: 1.2rem;
-      font-size: 1rem;
-      color: #a8dadc;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 500;
+      font-size: 0.95rem;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      transition: border-color 0.2s, color 0.2s;
     }
 
-    .score span {
+    .contact-link:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .contact-link .icon {
+      font-size: 1.2rem;
+    }
+
+    .contact-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .form-group label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .form-group input,
+    .form-group textarea {
+      padding: 0.75rem 1rem;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--bg);
+      transition: border-color 0.2s;
+      resize: vertical;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* FOOTER */
+    footer {
+      background: var(--text);
+      color: rgba(255,255,255,0.5);
       text-align: center;
+      padding: 2rem;
+      font-size: 0.85rem;
     }
 
-    .score .val {
-      display: block;
-      font-size: 1.8rem;
-      font-weight: bold;
-      color: #eee;
+    footer strong {
+      color: rgba(255,255,255,0.85);
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 700px) {
+      .about-grid,
+      .contact-grid {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+      }
+
+      .nav-links {
+        gap: 1.2rem;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>Tic-Tac-Toe</h1>
 
-  <div class="mode-select">
-    <button class="mode-btn active" id="btnPvP">2 Spieler</button>
-    <button class="mode-btn" id="btnPvAI">Gegen KI</button>
-  </div>
+  <!-- NAV -->
+  <nav>
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">Stefan Ponitz</a>
+      <ul class="nav-links">
+        <li><a href="#ueber-mich">Über mich</a></li>
+        <li><a href="#skills">Skills</a></li>
+        <li><a href="#kontakt">Kontakt</a></li>
+      </ul>
+    </div>
+  </nav>
 
-  <div class="status" id="status">Spieler X ist dran</div>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-inner">
+      <span class="hero-tag">Online-Marketing & KI-Beratung</span>
+      <h1>Hallo, ich bin<br><span>Stefan Ponitz</span></h1>
+      <p class="hero-sub">
+        Ich helfe Unternehmen dabei, ihre digitale Präsenz strategisch auszubauen –
+        mit datengetriebenem Online-Marketing und dem gezielten Einsatz von KI.
+      </p>
+      <div class="hero-cta">
+        <a href="#kontakt" class="btn-primary">Kontakt aufnehmen</a>
+        <a href="#ueber-mich" class="btn-outline">Mehr erfahren</a>
+      </div>
+    </div>
+  </section>
 
-  <div class="board" id="board">
-    <div class="cell" data-i="0"></div>
-    <div class="cell" data-i="1"></div>
-    <div class="cell" data-i="2"></div>
-    <div class="cell" data-i="3"></div>
-    <div class="cell" data-i="4"></div>
-    <div class="cell" data-i="5"></div>
-    <div class="cell" data-i="6"></div>
-    <div class="cell" data-i="7"></div>
-    <div class="cell" data-i="8"></div>
-  </div>
+  <!-- ÜBER MICH -->
+  <section id="ueber-mich">
+    <div class="section-inner">
+      <p class="section-label">Über mich</p>
+      <h2 class="section-title">Strategie trifft Technologie</h2>
+      <div class="about-grid">
+        <div class="about-text">
+          <p>
+            Als Berater für strategisches Online-Marketing und Künstliche Intelligenz
+            unterstütze ich Unternehmen dabei, ihre digitalen Marketingstrategien
+            zukunftssicher zu gestalten.
+          </p>
+          <p>
+            Mein Fokus liegt auf der Verbindung von bewährten Marketingprinzipien
+            mit modernen KI-Tools – für messbare Ergebnisse und nachhaltiges Wachstum.
+          </p>
+          <p>
+            Ich arbeite eng mit meinen Klienten zusammen, um individuelle Lösungen
+            zu entwickeln, die wirklich zu ihrem Unternehmen passen.
+          </p>
+        </div>
+        <div class="about-stats">
+          <div class="stat-card">
+            <div class="number">10+</div>
+            <div class="label">Jahre Erfahrung</div>
+          </div>
+          <div class="stat-card">
+            <div class="number">50+</div>
+            <div class="label">Projekte umgesetzt</div>
+          </div>
+          <div class="stat-card">
+            <div class="number">30+</div>
+            <div class="label">Zufriedene Kunden</div>
+          </div>
+          <div class="stat-card">
+            <div class="number">100%</div>
+            <div class="label">Fokus auf Ergebnisse</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-  <div class="score">
-    <span>X<span class="val" id="scoreX">0</span></span>
-    <span>Unent.<span class="val" id="scoreDraw">0</span></span>
-    <span>O<span class="val" id="scoreO">0</span></span>
-  </div>
+  <!-- SKILLS -->
+  <section id="skills">
+    <div class="section-inner">
+      <p class="section-label">Fähigkeiten</p>
+      <h2 class="section-title">Was ich mitbringe</h2>
+      <div class="skills-grid">
+        <div class="skill-card">
+          <div class="skill-icon">📈</div>
+          <h3>Strategisches Online-Marketing</h3>
+          <p>Entwicklung und Umsetzung ganzheitlicher digitaler Marketingstrategien mit klarem Fokus auf ROI.</p>
+          <div class="skill-tags">
+            <span class="tag">SEO / SEA</span>
+            <span class="tag">Content-Strategie</span>
+            <span class="tag">Performance Marketing</span>
+          </div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-icon">🤖</div>
+          <h3>KI-gestütztes Marketing</h3>
+          <p>Einsatz moderner KI-Tools zur Automatisierung, Personalisierung und Optimierung von Marketingprozessen.</p>
+          <div class="skill-tags">
+            <span class="tag">Generative KI</span>
+            <span class="tag">Automatisierung</span>
+            <span class="tag">Prompt Engineering</span>
+          </div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-icon">📊</div>
+          <h3>Analytics & Daten</h3>
+          <p>Datenbasierte Entscheidungsfindung durch strukturierte Analyse und aussagekräftige Reportings.</p>
+          <div class="skill-tags">
+            <span class="tag">Google Analytics</span>
+            <span class="tag">Reporting</span>
+            <span class="tag">Conversion-Optimierung</span>
+          </div>
+        </div>
+        <div class="skill-card">
+          <div class="skill-icon">💡</div>
+          <h3>Beratung & Workshops</h3>
+          <p>Praxisnahe Workshops und individuelle Beratungen für Teams und Führungskräfte zu digitalen Themen.</p>
+          <div class="skill-tags">
+            <span class="tag">Workshops</span>
+            <span class="tag">Coaching</span>
+            <span class="tag">Digitale Transformation</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-  <div class="controls">
-    <button class="btn" id="btnReset">Neues Spiel</button>
-    <button class="btn" id="btnResetScore">Score reset</button>
-  </div>
+  <!-- KONTAKT -->
+  <section id="kontakt">
+    <div class="section-inner">
+      <p class="section-label">Kontakt</p>
+      <h2 class="section-title">Lass uns sprechen</h2>
+      <div class="contact-grid">
+        <div class="contact-info">
+          <p>
+            Du hast ein Projekt, eine Frage oder möchtest mehr über meine Leistungen erfahren?
+            Ich freue mich auf deine Nachricht.
+          </p>
+          <div class="contact-links">
+            <a href="mailto:stefan@ponitz.de" class="contact-link">
+              <span class="icon">✉️</span>
+              stefan@ponitz.de
+            </a>
+            <a href="https://www.linkedin.com/in/stefan-ponitz" class="contact-link" target="_blank" rel="noopener">
+              <span class="icon">💼</span>
+              LinkedIn Profil
+            </a>
+          </div>
+        </div>
+        <form class="contact-form" onsubmit="handleSubmit(event)">
+          <div class="form-group">
+            <label for="name">Name</label>
+            <input type="text" id="name" placeholder="Dein Name" required>
+          </div>
+          <div class="form-group">
+            <label for="email">E-Mail</label>
+            <input type="email" id="email" placeholder="deine@email.de" required>
+          </div>
+          <div class="form-group">
+            <label for="message">Nachricht</label>
+            <textarea id="message" rows="4" placeholder="Deine Nachricht..." required></textarea>
+          </div>
+          <button type="submit" class="btn-primary" style="align-self: flex-start;">Nachricht senden</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <strong>Stefan Ponitz</strong> &nbsp;&middot;&nbsp; Beratung für strategisches Online-Marketing und KI
+    &nbsp;&middot;&nbsp; &copy; 2026
+  </footer>
 
   <script>
-    const WINS = [
-      [0,1,2],[3,4,5],[6,7,8],
-      [0,3,6],[1,4,7],[2,5,8],
-      [0,4,8],[2,4,6]
-    ];
-
-    let board = Array(9).fill(null);
-    let current = 'X';
-    let gameOver = false;
-    let vsAI = false;
-    let score = { X: 0, O: 0, draw: 0 };
-
-    const cells = document.querySelectorAll('.cell');
-    const statusEl = document.getElementById('status');
-    const scoreX = document.getElementById('scoreX');
-    const scoreO = document.getElementById('scoreO');
-    const scoreDraw = document.getElementById('scoreDraw');
-
-    document.getElementById('btnPvP').addEventListener('click', () => setMode(false));
-    document.getElementById('btnPvAI').addEventListener('click', () => setMode(true));
-    document.getElementById('btnReset').addEventListener('click', resetGame);
-    document.getElementById('btnResetScore').addEventListener('click', resetScore);
-
-    cells.forEach(cell => {
-      cell.addEventListener('click', () => handleClick(parseInt(cell.dataset.i)));
-    });
-
-    function setMode(ai) {
-      vsAI = ai;
-      document.getElementById('btnPvP').classList.toggle('active', !ai);
-      document.getElementById('btnPvAI').classList.toggle('active', ai);
-      resetGame();
+    function handleSubmit(e) {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.textContent = 'Gesendet ✓';
+      btn.style.background = '#16a34a';
+      btn.disabled = true;
+      e.target.reset();
+      setTimeout(() => {
+        btn.textContent = 'Nachricht senden';
+        btn.style.background = '';
+        btn.disabled = false;
+      }, 4000);
     }
 
-    function handleClick(i) {
-      if (gameOver || board[i]) return;
-      if (vsAI && current === 'O') return;
-      makeMove(i);
-      if (!gameOver && vsAI && current === 'O') {
-        setTimeout(aiMove, 350);
-      }
-    }
+    // Smooth active nav link highlighting
+    const sections = document.querySelectorAll('section[id]');
+    const navLinks = document.querySelectorAll('.nav-links a');
 
-    function makeMove(i) {
-      board[i] = current;
-      const cell = cells[i];
-      cell.textContent = current;
-      cell.classList.add('taken', current.toLowerCase());
-
-      const winLine = checkWin(current);
-      if (winLine) {
-        winLine.forEach(idx => cells[idx].classList.add('winner'));
-        statusEl.textContent = vsAI
-          ? (current === 'X' ? 'Du gewinnst! 🎉' : 'KI gewinnt! 🤖')
-          : `Spieler ${current} gewinnt! 🎉`;
-        score[current]++;
-        updateScore();
-        gameOver = true;
-        return;
-      }
-
-      if (board.every(v => v)) {
-        statusEl.textContent = 'Unentschieden!';
-        score.draw++;
-        updateScore();
-        gameOver = true;
-        return;
-      }
-
-      current = current === 'X' ? 'O' : 'X';
-      statusEl.textContent = vsAI
-        ? (current === 'X' ? 'Du bist dran (X)' : 'KI denkt...')
-        : `Spieler ${current} ist dran`;
-    }
-
-    function checkWin(player) {
-      return WINS.find(line => line.every(i => board[i] === player)) || null;
-    }
-
-    function aiMove() {
-      const move = bestMove();
-      makeMove(move);
-    }
-
-    function bestMove() {
-      // Try to win
-      for (let i = 0; i < 9; i++) {
-        if (!board[i]) {
-          board[i] = 'O';
-          if (checkWin('O')) { board[i] = null; return i; }
-          board[i] = null;
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          navLinks.forEach(link => {
+            link.style.color = link.getAttribute('href') === '#' + entry.target.id
+              ? 'var(--accent)'
+              : '';
+          });
         }
-      }
-      // Block player
-      for (let i = 0; i < 9; i++) {
-        if (!board[i]) {
-          board[i] = 'X';
-          if (checkWin('X')) { board[i] = null; return i; }
-          board[i] = null;
-        }
-      }
-      // Take center
-      if (!board[4]) return 4;
-      // Take corner
-      const corners = [0, 2, 6, 8].filter(i => !board[i]);
-      if (corners.length) return corners[Math.floor(Math.random() * corners.length)];
-      // Take any
-      const free = board.map((v, i) => v ? null : i).filter(v => v !== null);
-      return free[Math.floor(Math.random() * free.length)];
-    }
-
-    function resetGame() {
-      board = Array(9).fill(null);
-      current = 'X';
-      gameOver = false;
-      cells.forEach(cell => {
-        cell.textContent = '';
-        cell.className = 'cell';
       });
-      statusEl.textContent = vsAI ? 'Du bist dran (X)' : 'Spieler X ist dran';
-    }
+    }, { threshold: 0.4 });
 
-    function resetScore() {
-      score = { X: 0, O: 0, draw: 0 };
-      updateScore();
-      resetGame();
-    }
-
-    function updateScore() {
-      scoreX.textContent = score.X;
-      scoreO.textContent = score.O;
-      scoreDraw.textContent = score.draw;
-    }
+    sections.forEach(s => observer.observe(s));
   </script>
 </body>
 </html>
