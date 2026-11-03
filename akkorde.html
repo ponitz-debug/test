@@ -20,6 +20,7 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    [hidden] { display: none !important; }
 
     body {
       font-family: 'Segoe UI', system-ui, sans-serif;
@@ -68,6 +69,19 @@
     .chord .notes { font-size: 0.85rem; color: var(--muted); }
     .chord.active .notes { color: inherit; }
 
+    .pads { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; max-width: 560px; }
+    .pad {
+      aspect-ratio: 1; display: grid; grid-template-rows: auto 1fr auto; text-align: left;
+      padding: 0.6rem 0.7rem; border-radius: 10px; background: var(--surface-2);
+      border: 1px solid var(--line);
+    }
+    .pad .num { font-size: 0.7rem; color: var(--muted); }
+    .pad .name { font-size: 1.25rem; font-weight: 700; align-self: center; }
+    .pad .roman { font-size: 0.75rem; color: var(--muted); }
+    .pad.active .num, .pad.active .roman { color: inherit; }
+    .pad.empty { background: var(--surface); opacity: 0.4; }
+    @media (max-width: 480px) { .pad .name { font-size: 1rem; } .pad { padding: 0.4rem 0.5rem; } }
+
     .detail { font-size: 1.1rem; margin-bottom: 0.8rem; }
     .detail b { font-size: 1.5rem; margin-right: 0.6rem; }
     .detail .tone { display: inline-block; margin-right: 0.8rem; }
@@ -113,12 +127,14 @@
     <div class="row" id="modes"></div>
     <div class="row" id="roots"></div>
     <div class="row spellings" id="spellings"></div>
+    <div class="row spellings" id="namings"></div>
     <div class="keyname" id="keyname"></div>
   </section>
 
   <section>
     <h2>Akkorde der Tonart</h2>
     <div class="chords" id="chords"></div>
+    <div class="pads" id="pads" hidden></div>
   </section>
 
   <section>
@@ -147,6 +163,14 @@
     sharp: { label: '♯', roots: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] },
     flat:  { label: '♭', roots: ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'] },
   };
+  // Benennung: Deutsch (H/B), International (B/B♭) oder wie auf dem Akai-MPC-Display (Cmaj, Dmin, Bb)
+  const NAMINGS = {
+    de:   { label: 'Deutsch', quality: { '': '', m: 'm', '°': '°', '+': '+' } },
+    intl: { label: 'International', quality: { '': '', m: 'm', '°': '°', '+': '+' } },
+    mpc:  { label: 'MPC', quality: { '': 'maj', m: 'min', '°': 'dim', '+': 'aug' } },
+  };
+  const ASCII_ACC = { '-2': 'bb', '-1': 'b', '0': '', '1': '#', '2': '##' };
+
   function rootsFor(mode, spelling) {
     return SPELLINGS[spelling].roots || MODES[mode].roots;
   }
@@ -168,6 +192,8 @@
 
   // Deutsche Schreibweise: H statt B, B statt B♭
   function noteName(n) {
+    if (state.naming === 'mpc') return n.letter + ASCII_ACC[n.acc];
+    if (state.naming === 'intl') return n.letter + ACC[n.acc];
     if (n.letter === 'B' && n.acc === 0) return 'H';
     if (n.letter === 'B' && n.acc === -1) return 'B';
     if (n.letter === 'B' && n.acc === -2) return 'B♭'; // Heses
@@ -200,12 +226,13 @@
       // Töne auf die Klaviatur legen: Grundton in der ersten Oktave (C4 = 60)
       const midis = [60 + notes[0].pc];
       intervals.forEach(iv => midis.push(midis[midis.length - 1] + iv));
-      return { degree: d, notes, quality: q, roman, name: noteName(notes[0]) + q.sym, midis };
+      const name = noteName(notes[0]) + NAMINGS[state.naming].quality[q.sym];
+      return { degree: d, notes, quality: q, roman, name, midis };
     });
   }
 
   // --- Zustand ------------------------------------------------------------
-  const state = { mode: 'major', root: 0, chord: 0, spelling: 'auto' };
+  const state = { mode: 'major', root: 0, chord: 0, spelling: 'auto', naming: 'de', octave: 0 };
   let scale = [], chords = [];
 
   function recompute() {
@@ -224,6 +251,9 @@
     $('spellings').innerHTML = '<span class="hint">Schreibweise:</span>' +
       Object.entries(SPELLINGS).map(([k, s]) =>
         `<button data-spelling="${k}" class="small ${k === state.spelling ? 'active' : ''}">${s.label}</button>`).join('');
+    $('namings').innerHTML = '<span class="hint">Benennung:</span>' +
+      Object.entries(NAMINGS).map(([k, n]) =>
+        `<button data-naming="${k}" class="small ${k === state.naming ? 'active' : ''}">${n.label}</button>`).join('');
   }
 
   function renderRoots() {
@@ -237,7 +267,30 @@
     $('keyname').innerHTML = `${name}${MODES[state.mode].suffix}<span>${sig} · Tonleiter: ${scale.map(noteName).join(' · ')}</span>`;
   }
 
+  // MPC-Ansicht: 16 Pads, Pad 1 unten links, Stufen fortlaufend über die Oktaven
+  function renderPads() {
+    const mpc = state.naming === 'mpc';
+    $('pads').hidden = !mpc;
+    $('chords').hidden = mpc;
+    if (!mpc) return;
+    const pads = [];
+    for (let row = 3; row >= 0; row--) {
+      for (let col = 0; col < 4; col++) {
+        const n = row * 4 + col; // 0-basiert
+        const d = n % 7, oct = Math.floor(n / 7);
+        const c = chords[d];
+        const active = d === state.chord && oct === state.octave;
+        pads.push(`<button class="pad ${active ? 'active' : ''}" data-chord="${d}" data-octave="${oct}">
+          <span class="num">Pad ${n + 1}${oct ? ' · +' + oct + ' Okt.' : ''}</span>
+          <span class="name">${c.name}</span>
+          <span class="roman">${c.roman}</span></button>`);
+      }
+    }
+    $('pads').innerHTML = pads.join('');
+  }
+
   function renderChords() {
+    renderPads();
     $('chords').innerHTML = chords.map((c, i) => `
       <button class="chord ${i === state.chord ? 'active' : ''}" data-chord="${i}">
         <span class="roman">${c.roman}</span>
@@ -252,13 +305,14 @@
       c.notes.map((n, i) => `<span class="tone">${noteName(n)}<small>${TONE_NAMES[i]}</small></span>`).join('');
   }
 
-  const LOW = 60, HIGH = 84; // C4 bis C6
   const WHITE_PCS = [0, 2, 4, 5, 7, 9, 11];
+  let kbLow = 60; // unterstes C der Klaviatur (C4 = 60), zwei Oktaven
 
-  function buildKeyboard() {
+  function buildKeyboard(low) {
+    kbLow = low;
     const kb = $('keyboard');
     let html = '', whiteIndex = 0;
-    for (let m = LOW; m <= HIGH; m++) {
+    for (let m = low; m <= low + 24; m++) {
       const pc = m % 12;
       if (WHITE_PCS.includes(pc)) {
         html += `<div class="key white" data-midi="${m}"><span class="lab"></span></div>`;
@@ -272,9 +326,12 @@
 
   function renderKeyboard() {
     const c = chords[state.chord];
+    const midis = c.midis.map(m => m + 12 * state.octave);
+    const low = Math.floor(midis[0] / 12) * 12;
+    if (low !== kbLow) buildKeyboard(low);
     document.querySelectorAll('#keyboard .key').forEach(k => {
       const m = +k.dataset.midi;
-      const idx = c.midis.indexOf(m);
+      const idx = midis.indexOf(m);
       k.classList.toggle('on', idx >= 0);
       k.classList.toggle('root', idx === 0);
       const lab = k.querySelector('.lab');
@@ -306,22 +363,32 @@
     state.spelling = b.dataset.spelling;
     renderAll();
   });
+  $('namings').addEventListener('click', e => {
+    const b = e.target.closest('[data-naming]');
+    if (!b) return;
+    state.naming = b.dataset.naming;
+    state.octave = 0;
+    renderAll();
+  });
   $('roots').addEventListener('click', e => {
     const b = e.target.closest('[data-root]');
     if (!b) return;
     state.root = +b.dataset.root;
     renderAll();
   });
-  $('chords').addEventListener('click', e => {
+  function onChordClick(e) {
     const b = e.target.closest('[data-chord]');
     if (!b) return;
     state.chord = +b.dataset.chord;
+    state.octave = +(b.dataset.octave || 0);
     renderChords();
     renderDetail();
     renderKeyboard();
-  });
+  }
+  $('chords').addEventListener('click', onChordClick);
+  $('pads').addEventListener('click', onChordClick);
 
-  buildKeyboard();
+  buildKeyboard(60);
   renderAll();
 </script>
 </body>
