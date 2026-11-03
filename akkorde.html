@@ -88,25 +88,18 @@
     }
     .tryout .key.black .kbd { color: #9a9aa3; top: auto; bottom: 6px; }
     .tryout .key.black .lab { display: none; }
-    .key.pressed { background: var(--accent) !important; }
-    /* Gespielter Ton auf der klassischen Klaviatur: grün leuchtender Punkt, Tastenfarbe bleibt */
-    #keyboard .key.pressed { background: inherit !important; }
-    #keyboard .key.white.pressed { background: var(--white-key) !important; }
-    #keyboard .key.white.pressed.on { background: var(--accent) !important; }
-    #keyboard .key.white.pressed.on.root { background: var(--root) !important; }
-    #keyboard .key.black.pressed { background: var(--black-key) !important; }
-    #keyboard .key.black.pressed.on { background: var(--accent) !important; }
-    #keyboard .key.black.pressed.on.root { background: var(--root) !important; }
-    #keyboard .key.pressed::after {
-      content: ''; position: absolute; left: 50%; width: 14px; height: 14px; margin-left: -7px;
+    /* Gespielter Ton: grün leuchtender Punkt auf allen Klaviaturen, Tastenfarbe bleibt */
+    .played { position: relative; }
+    .played::after {
+      content: ''; position: absolute; left: 50%; top: 62%; width: 14px; height: 14px; margin-left: -7px;
       border-radius: 50%; background: #2eff6a; box-shadow: 0 0 6px 2px #4dff85, 0 0 14px 4px rgba(60, 255, 120, 0.6);
-      animation: hit 0.45s ease-out forwards; z-index: 3;
+      animation: hit 0.45s ease-out forwards; z-index: 3; pointer-events: none;
     }
-    #keyboard .key.white.pressed::after { top: 62%; }
-    #keyboard .key.black.pressed::after { top: 30%; width: 10px; height: 10px; margin-left: -5px; }
+    .key.black.played::after { top: 30%; width: 10px; height: 10px; margin-left: -5px; }
+    .tile.played::after { top: 30%; }
     @keyframes hit { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.25); opacity: 0; } }
-    @media (prefers-reduced-motion: reduce) { #keyboard .key.pressed::after { animation: none; } }
-    @media (max-width: 700px) { #keyboard .key.pressed::after { width: 10px; height: 10px; margin-left: -5px; } }
+    @media (prefers-reduced-motion: reduce) { .played::after { animation: none; } }
+    @media (max-width: 700px) { .played::after { width: 10px; height: 10px; margin-left: -5px; } }
     @media (max-width: 860px) { .editor-wrap { grid-template-columns: 1fr; } }
     .editor h3, .editor-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 600; }
     .editor .param { display: grid; grid-template-columns: 120px 1fr 64px; gap: 0.6rem; align-items: center; font-size: 0.9rem; }
@@ -210,7 +203,6 @@
     .strip .tile small { font-size: 0.65rem; font-weight: 400; color: #8a8478; }
     .strip .tile.isroot { background: #ffd9d3; border-bottom-color: #e29a90; color: #b8321f; }
     .strip .tile.isroot small { color: #c9776b; }
-    .strip .tile.pressed { background: var(--accent); border-bottom-color: #c48c1f; color: var(--key-text); }
     .strip .tile.octave-start { margin-left: 6px; }
     @media (max-width: 700px) { .strip { gap: 2px; } .strip .tile { height: 90px; font-size: 0.7rem; } .strip .tile small { display: none; } }
     .key.on { background: var(--accent); }
@@ -761,21 +753,21 @@
     if (k.classList.contains('muted')) return;
     const m = +k.dataset.midi;
     playChord([m]);
-    // Auf der klassischen Klaviatur erscheint ein roter Punkt (auch bei direktem Anschlag dort)
-    const onMain = k.closest('#keyboard');
-    if (onMain) flash(k, 450);
-    else {
-      flash(k);
-      const mirror = $('keyboard').querySelector(`.key[data-midi="${m}"]`);
-      if (mirror) flash(mirror, 450);
-    }
+    showPlayed([m]);
   }
-  function flash(el, ms = 180) {
-    el.classList.remove('pressed');
+  // Grüner Punkt auf jeder Klaviatur, die den Ton hat: Klaviatur, Tonleiter-Leiste, Probier-Klaviatur
+  function showPlayed(midis, ms = 450) {
+    midis.forEach(m => {
+      document.querySelectorAll(`#keyboard [data-midi="${m}"], #scaleKeyboard [data-midi="${m}"], #tryout [data-midi="${m}"]`)
+        .forEach(el => flash(el, ms));
+    });
+  }
+  function flash(el, ms) {
+    el.classList.remove('played');
     void el.offsetWidth; // Animation neu starten, auch bei schnellem Wiederholen
-    el.classList.add('pressed');
+    el.classList.add('played');
     clearTimeout(el._flash);
-    el._flash = setTimeout(() => el.classList.remove('pressed'), ms);
+    el._flash = setTimeout(() => el.classList.remove('played'), ms);
   }
 
   // Tonleiter-Leiste: Skalentöne fortlaufend ab dem Grundton, so viele Oktaven wie die Klaviatur
@@ -846,7 +838,7 @@
     state.sound = v;
     try { localStorage.setItem('akkordkompass.sound', v); } catch (e) {}
   });
-  $('play').addEventListener('click', () => playChord(currentChord().midis));
+  $('play').addEventListener('click', () => { playChord(currentChord().midis); showPlayed(currentChord().midis, 700); });
   $('editInstrument').addEventListener('click', () => { state.editing = !state.editing; renderSettings(); });
   $('editor').addEventListener('input', e => {
     const r = e.target.closest('[data-param]');
@@ -903,6 +895,7 @@
       apply(+b.dataset[attr]);
       playChord(currentChord().midis);
       renderSelection();
+      showPlayed(currentChord().midis, 700);
     };
   }
   const onChord = selectAndPlay('chord', v => { state.chord = v; });
