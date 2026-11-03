@@ -73,6 +73,12 @@
     .tryout .keyboard { height: 120px; cursor: pointer; }
     .tryout .key.white:not(.on) .lab { display: block; }
     .tryout .hint { font-size: 0.8rem; color: var(--muted); }
+    .tryout .kbd {
+      position: absolute; top: 6px; left: 0; right: 0; text-align: center; font-size: 0.6rem;
+      font-family: ui-monospace, Menlo, Consolas, monospace; color: #8c877a;
+    }
+    .tryout .key.black .kbd { color: #9a9aa3; top: auto; bottom: 6px; }
+    .tryout .key.black .lab { display: none; }
     .key.pressed { background: var(--accent) !important; }
     @media (max-width: 860px) { .editor-wrap { grid-template-columns: 1fr; } }
     .editor h3, .editor-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 600; }
@@ -213,7 +219,7 @@
         <div class="tryout">
           <h3 class="editor-title">Einzelne Töne anschlagen</h3>
           <div class="keyboard" id="tryout"></div>
-          <div class="hint">Eine Oktave ab C4, spielt mit dem gewählten Instrument.</div>
+          <div class="hint">Eine Oktave ab C4 mit dem gewählten Instrument. Auch per Tastatur: A–K für die weißen, W E T Z U für die schwarzen Tasten.</div>
         </div>
       </div>
     </div>
@@ -610,10 +616,23 @@
     el.innerHTML = keyboardHtml(60, 1);
     el.querySelectorAll('.key').forEach(k => {
       const m = +k.dataset.midi;
-      const pc = m % 12;
-      k.querySelector('.lab').textContent = WHITE_PCS.includes(pc) ? ['C', 'D', 'E', 'F', 'G', 'A', 'B'][WHITE_PCS.indexOf(pc)] : '';
+      k.insertAdjacentHTML('beforeend', `<span class="kbd">${KEYLABEL[m] || ''}</span>`);
     });
   }
+  // Computertastatur (deutsches Layout): A S D F G H J K = C D E F G A H C, W E T Z U = Cis Dis Fis Gis Ais
+  const KEYMAP = { a: 60, w: 61, s: 62, e: 63, d: 64, f: 65, t: 66, g: 67, z: 68, y: 68, h: 69, u: 70, j: 71, k: 72 };
+  const KEYLABEL = {};
+  Object.entries(KEYMAP).forEach(([ch, m]) => { if (!KEYLABEL[m] || ch !== 'y') KEYLABEL[m] = ch.toUpperCase(); });
+  document.addEventListener('keydown', e => {
+    if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
+    const m = KEYMAP[e.key.toLowerCase()];
+    if (!m || state.sound !== 'on') return;
+    e.preventDefault();
+    const k = $('tryout').querySelector(`.key[data-midi="${m}"]`);
+    if (k) pressKey(k); else playChord([m]);
+  });
+
   function pressKey(k) {
     const m = +k.dataset.midi;
     playChord([m]);
@@ -680,16 +699,13 @@
     r.nextElementSibling.textContent = fmtParam(p, +r.value);
   });
   $('editor').addEventListener('change', e => {
-    if (!e.target.closest('[data-param]')) return;
-    saveParams();
-    playChord(currentChord().midis);
+    if (e.target.closest('[data-param]')) saveParams();
   });
   $('editor').addEventListener('click', e => {
     if (e.target.id === 'resetInstrument') {
       Object.assign(INSTRUMENTS[state.instrument], DEFAULTS[state.instrument]);
       saveParams();
       renderEditor();
-      playChord(currentChord().midis);
     }
     if (e.target.id === 'closeEditor') { state.editing = false; renderSettings(); }
   });
@@ -700,7 +716,7 @@
   $('instrument').addEventListener('change', e => {
     state.instrument = e.target.value;
     try { localStorage.setItem('akkordkompass.instrument', state.instrument); } catch (e2) {}
-    playChord(currentChord().midis);
+    renderEditor();
   });
 
   $('chords').addEventListener('click', e => {
