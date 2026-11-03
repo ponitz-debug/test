@@ -123,7 +123,9 @@
     }
 
     /* --- Klaviatur, vier Oktaven --------------------------------------- */
-    .detail { font-size: 1.1rem; margin-bottom: 0.8rem; }
+    .detail-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 0.6rem; margin-bottom: 0.8rem; }
+    .detail { font-size: 1.1rem; }
+    #play[disabled] { opacity: 0.4; cursor: default; }
     .detail b { font-size: 1.5rem; margin-right: 0.6rem; }
     .detail .tone { display: inline-block; margin-right: 0.8rem; }
     .detail .tone small { color: var(--muted); margin-left: 0.2rem; }
@@ -181,6 +183,10 @@
       <div class="label">Ansicht</div>
       <div class="row" id="views"></div>
     </div>
+    <div class="setting">
+      <div class="label">Klang</div>
+      <div class="row" id="sounds"></div>
+    </div>
   </section>
 
   <section id="listview">
@@ -217,7 +223,10 @@
 
   <section>
     <h2>Klaviatur</h2>
-    <div class="detail" id="detail"></div>
+    <div class="detail-row">
+      <div class="detail" id="detail"></div>
+      <button id="play" type="button" title="Akkord abspielen">▶ Anhören</button>
+    </div>
     <div class="keyboard" id="keyboard"></div>
   </section>
 </main>
@@ -239,6 +248,7 @@
 
   const NAMINGS = { de: 'Deutsch', intl: 'International' };
   const VIEWS = { piano: 'Klaviatur', mpc: 'MPC' };
+  const SOUNDS = { on: 'An', off: 'Aus' };
 
   // Akkordformeln als Skalenstufen relativ zum Grundton des Akkords (wie im MPC-Menü "Chord")
   const FORMULAS = ['1-3-5', '1-3-5-7', '1-3-5-6', '1-3-5-9', '1-4-5', '1-5-7', '1-2-5', '1-5'];
@@ -322,9 +332,44 @@
 
   // --- Zustand ------------------------------------------------------------
   const state = {
-    mode: 'major', root: 0, naming: 'de', view: 'piano',
+    mode: 'major', root: 0, naming: 'de', view: 'piano', sound: 'on',
     formula: '1-3-5', chord: 0, pad: 0, mpcOctave: 0,
   };
+  try { if (localStorage.getItem('akkordkompass.sound') === 'off') state.sound = 'off'; } catch (e) {}
+
+  // --- Klang (Web Audio) --------------------------------------------------
+  let audio = null;
+  function playChord(midis) {
+    if (state.sound !== 'on') return;
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === 'suspended') audio.resume();
+    } catch (e) { return; }
+    const now = audio.currentTime;
+    const master = audio.createGain();
+    master.gain.value = 0.9 / Math.sqrt(midis.length);
+    master.connect(audio.destination);
+    midis.forEach((m, i) => {
+      const t = now + i * 0.035; // leicht angeschlagen, wie ein Arpeggio
+      const freq = 440 * Math.pow(2, (m - 69) / 12);
+      const env = audio.createGain();
+      env.gain.setValueAtTime(0, t);
+      env.gain.linearRampToValueAtTime(0.22, t + 0.015);
+      env.gain.exponentialRampToValueAtTime(0.08, t + 0.5);
+      env.gain.exponentialRampToValueAtTime(0.001, t + 2.2);
+      env.connect(master);
+      [['triangle', 1, 1], ['sine', 2, 0.25]].forEach(([type, mult, vol]) => {
+        const osc = audio.createOscillator();
+        osc.type = type;
+        osc.frequency.value = freq * mult;
+        const g = audio.createGain();
+        g.gain.value = vol;
+        osc.connect(g).connect(env);
+        osc.start(t);
+        osc.stop(t + 2.3);
+      });
+    });
+  }
   let scale = [], chords = [], pads = [];
 
   function recompute() {
@@ -347,6 +392,8 @@
     $('modes').innerHTML = toggles(MODES, 'mode', state.mode, m => m.label);
     $('namings').innerHTML = toggles(NAMINGS, 'naming', state.naming, v => v);
     $('views').innerHTML = toggles(VIEWS, 'view', state.view, v => v);
+    $('sounds').innerHTML = toggles(SOUNDS, 'sound', state.sound, v => v);
+    $('play').disabled = state.sound !== 'on';
     const roots = MODES[state.mode].roots;
     $('roots').innerHTML = roots.map((r, i) =>
       `<button data-root="${i}" class="${i === state.root ? 'active' : ''}">${noteName(parseNote(r))}</button>`).join('');
@@ -470,18 +517,25 @@
   onToggle('roots', 'root', v => { state.root = +v; });
   onToggle('namings', 'naming', v => { state.naming = v; });
   onToggle('views', 'view', v => { state.view = v; });
+  onToggle('sounds', 'sound', v => {
+    state.sound = v;
+    try { localStorage.setItem('akkordkompass.sound', v); } catch (e) {}
+  });
+  $('play').addEventListener('click', () => playChord(currentChord().midis));
 
   $('chords').addEventListener('click', e => {
     const b = e.target.closest('[data-chord]');
     if (!b) return;
     state.chord = +b.dataset.chord;
     renderSelection();
+    playChord(currentChord().midis);
   });
   $('mpcpads').addEventListener('click', e => {
     const b = e.target.closest('[data-pad]');
     if (!b) return;
     state.pad = +b.dataset.pad;
     renderSelection();
+    playChord(currentChord().midis);
   });
   const setFormula = f => { state.formula = f; recompute(); renderSelection(); };
   $('listChord').addEventListener('change', e => setFormula(e.target.value));
