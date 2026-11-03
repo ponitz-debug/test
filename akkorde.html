@@ -82,6 +82,9 @@
     .tryout .keyboard { height: 120px; cursor: pointer; }
     .tryout .key.white:not(.on) .lab { display: block; }
     .tryout .hint { font-size: 0.8rem; color: var(--muted); }
+    .tryout-head { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; }
+    .tryout-oct { display: flex; gap: 0.3rem; }
+    .tryout-oct button { padding: 0.2rem 0.7rem; }
     .tryout .kbd {
       position: absolute; top: 6px; left: 0; right: 0; text-align: center; font-size: 0.6rem;
       font-family: ui-monospace, Menlo, Consolas, monospace; color: #8c877a;
@@ -260,9 +263,12 @@
       <div class="editor-wrap" id="editorWrap" hidden>
         <div class="editor" id="editor"></div>
         <div class="tryout">
-          <h3 class="editor-title">Einzelne Töne anschlagen</h3>
+          <div class="tryout-head">
+            <h3 class="editor-title">Einzelne Töne anschlagen</h3>
+            <span class="mpc-oct tryout-oct"><button id="kbOctDown" type="button" class="small" title="Oktave tiefer (Taste 1)">−</button><button id="kbOctUp" type="button" class="small" title="Oktave höher (Taste 2)">+</button></span>
+          </div>
           <div class="keyboard" id="tryout"></div>
-          <div class="hint">Eine Oktave ab C4 mit dem gewählten Instrument. Auch per Tastatur: A–K für die weißen, W E T Z U für die schwarzen Tasten.</div>
+          <div class="hint" id="tryoutHint"></div>
         </div>
       </div>
     </div>
@@ -496,6 +502,7 @@
   const state = {
     mode: 'major', root: 0, naming: 'de', view: 'piano', sound: 'on',
     formula: '1-3-5', chord: 0, pad: 0, mpcOctave: 0,
+    kbOctave: 0, // Oktavlage der Computertastatur / Probier-Klaviatur, Tasten 1 und 2
   };
   state.instrument = 'keys';
   state.editing = false;
@@ -629,9 +636,7 @@
     $('editInstrument').disabled = state.sound !== 'on';
     $('editInstrument').classList.toggle('active', state.editing);
     renderEditor();
-    $('tryout').querySelectorAll('.key.white .lab').forEach((lab, i) => {
-      lab.textContent = noteName({ letter: LETTERS[i % 7], acc: 0 });
-    });
+    renderTryoutLabels();
   }
 
 
@@ -729,11 +734,19 @@
   function buildTryout() {
     const el = $('tryout');
     el.style.setProperty('--whites', 8);
-    el.innerHTML = keyboardHtml(60, 1);
+    el.innerHTML = keyboardHtml(60 + 12 * state.kbOctave, 1);
     el.querySelectorAll('.key').forEach(k => {
-      const m = +k.dataset.midi;
+      const m = +k.dataset.midi - 12 * state.kbOctave;
       k.insertAdjacentHTML('beforeend', `<span class="kbd">${KEYLABEL[m] || ''}</span>`);
     });
+  }
+  function renderTryoutLabels() {
+    const low = 60 + 12 * state.kbOctave;
+    $('tryout').querySelectorAll('.key.white .lab').forEach((lab, i) => {
+      lab.textContent = noteName({ letter: LETTERS[i % 7], acc: 0 }) + (i === 0 || i === 7 ? octaveOf(low + (i === 7 ? 12 : 0)) : '');
+    });
+    $('tryoutHint').textContent = `Oktave C${octaveOf(low)}–C${octaveOf(low) + 1} mit dem gewählten Instrument. ` +
+      `Tastatur: A–K weiße, W E T Z U schwarze Tasten; 1 und 2 schalten die Oktave (${state.kbOctave > 0 ? '+' : ''}${state.kbOctave}).`;
   }
   // Computertastatur (deutsches Layout): A S D F G H J K = C D E F G A H C, W E T Z U = Cis Dis Fis Gis Ais
   const KEYMAP = { a: 60, w: 61, s: 62, e: 63, d: 64, f: 65, t: 66, g: 67, z: 68, y: 68, h: 69, u: 70, j: 71, k: 72 };
@@ -742,12 +755,24 @@
   document.addEventListener('keydown', e => {
     if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
     if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
-    const m = KEYMAP[e.key.toLowerCase()];
-    if (!m || state.sound !== 'on') return;
+    const key = e.key.toLowerCase();
+    if (key === '1' || key === '2') {
+      e.preventDefault();
+      setKbOctave(state.kbOctave + (key === '1' ? -1 : 1));
+      return;
+    }
+    const base = KEYMAP[key];
+    if (!base || state.sound !== 'on') return;
     e.preventDefault();
+    const m = base + 12 * state.kbOctave;
     const k = $('tryout').querySelector(`.key[data-midi="${m}"]`);
-    if (k) pressKey(k); else playChord([m]);
+    if (k) pressKey(k); else { playChord([m]); showPlayed([m]); }
   });
+  function setKbOctave(v) {
+    state.kbOctave = Math.max(-2, Math.min(2, v));
+    buildTryout();
+    renderTryoutLabels();
+  }
 
   function pressKey(k) {
     if (k.classList.contains('muted')) return;
@@ -840,6 +865,8 @@
   });
   $('play').addEventListener('click', () => { playChord(currentChord().midis); showPlayed(currentChord().midis, 700); });
   $('editInstrument').addEventListener('click', () => { state.editing = !state.editing; renderSettings(); });
+  $('kbOctDown').addEventListener('click', () => setKbOctave(state.kbOctave - 1));
+  $('kbOctUp').addEventListener('click', () => setKbOctave(state.kbOctave + 1));
   $('editor').addEventListener('input', e => {
     const r = e.target.closest('[data-param]');
     if (!r) return;
