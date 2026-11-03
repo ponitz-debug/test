@@ -185,7 +185,10 @@
     </div>
     <div class="setting">
       <div class="label">Klang</div>
-      <div class="row" id="sounds"></div>
+      <div class="row">
+        <span id="sounds" class="row"></span>
+        <select id="instrument" aria-label="Instrument"></select>
+      </div>
     </div>
   </section>
 
@@ -249,6 +252,18 @@
   const NAMINGS = { de: 'Deutsch', intl: 'International' };
   const VIEWS = { piano: 'Klaviatur', mpc: 'MPC' };
   const SOUNDS = { on: 'An', off: 'Aus' };
+
+  // Instrumente: einfache Synthese-Rezepte (Oszillatoren, Hüllkurve, Filter)
+  const INSTRUMENTS = {
+    keys: { label: 'Keys (Piano)', oct: 0, strum: 0.02, attack: 0.005, peak: 0.3, sustain: 0.06, hold: 0.35, release: 1.6,
+            filter: 3200, voices: [['triangle', 1, 1], ['sine', 2, 0.35], ['sine', 3, 0.12], ['sine', 4, 0.05]] },
+    pad:  { label: 'Pad (Fläche)', oct: 0, strum: 0.0, attack: 0.6, peak: 0.16, sustain: 0.14, hold: 2.5, release: 2.5,
+            filter: 1400, voices: [['sawtooth', 1, 0.5, -7], ['sawtooth', 1, 0.5, 7], ['sine', 0.5, 0.4]] },
+    synth:{ label: 'Synthesizer', oct: 0, strum: 0.0, attack: 0.01, peak: 0.25, sustain: 0.12, hold: 0.6, release: 0.8,
+            filter: 2200, voices: [['sawtooth', 1, 0.7], ['square', 1, 0.3, 5]] },
+    bass: { label: 'Bass', oct: -1, strum: 0.03, attack: 0.01, peak: 0.45, sustain: 0.2, hold: 0.5, release: 0.6,
+            filter: 900, voices: [['triangle', 1, 1], ['sine', 1, 0.6], ['sawtooth', 1, 0.15]] },
+  };
 
   // Akkordformeln als Skalenstufen relativ zum Grundton des Akkords (wie im MPC-Menü "Chord")
   const FORMULAS = ['1-3-5', '1-3-5-7', '1-3-5-6', '1-3-5-9', '1-4-5', '1-5-7', '1-2-5', '1-5'];
@@ -335,7 +350,12 @@
     mode: 'major', root: 0, naming: 'de', view: 'piano', sound: 'on',
     formula: '1-3-5', chord: 0, pad: 0, mpcOctave: 0,
   };
-  try { if (localStorage.getItem('akkordkompass.sound') === 'off') state.sound = 'off'; } catch (e) {}
+  state.instrument = 'keys';
+  try {
+    if (localStorage.getItem('akkordkompass.sound') === 'off') state.sound = 'off';
+    const inst = localStorage.getItem('akkordkompass.instrument');
+    if (INSTRUMENTS[inst]) state.instrument = inst;
+  } catch (e) {}
 
   // --- Klang (Web Audio) --------------------------------------------------
   let audio = null;
@@ -345,28 +365,35 @@
       audio = audio || new (window.AudioContext || window.webkitAudioContext)();
       if (audio.state === 'suspended') audio.resume();
     } catch (e) { return; }
+    const ins = INSTRUMENTS[state.instrument];
     const now = audio.currentTime;
     const master = audio.createGain();
     master.gain.value = 0.9 / Math.sqrt(midis.length);
-    master.connect(audio.destination);
+    const filter = audio.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = ins.filter;
+    filter.Q.value = 0.7;
+    master.connect(filter).connect(audio.destination);
+    const end = ins.attack + ins.hold + ins.release;
     midis.forEach((m, i) => {
-      const t = now + i * 0.035; // leicht angeschlagen, wie ein Arpeggio
-      const freq = 440 * Math.pow(2, (m - 69) / 12);
+      const t = now + i * ins.strum;
+      const freq = 440 * Math.pow(2, (m + 12 * ins.oct - 69) / 12);
       const env = audio.createGain();
       env.gain.setValueAtTime(0, t);
-      env.gain.linearRampToValueAtTime(0.22, t + 0.015);
-      env.gain.exponentialRampToValueAtTime(0.08, t + 0.5);
-      env.gain.exponentialRampToValueAtTime(0.001, t + 2.2);
+      env.gain.linearRampToValueAtTime(ins.peak, t + ins.attack);
+      env.gain.exponentialRampToValueAtTime(ins.sustain, t + ins.attack + ins.hold);
+      env.gain.exponentialRampToValueAtTime(0.001, t + end);
       env.connect(master);
-      [['triangle', 1, 1], ['sine', 2, 0.25]].forEach(([type, mult, vol]) => {
+      ins.voices.forEach(([type, mult, vol, detune]) => {
         const osc = audio.createOscillator();
         osc.type = type;
         osc.frequency.value = freq * mult;
+        if (detune) osc.detune.value = detune;
         const g = audio.createGain();
         g.gain.value = vol;
         osc.connect(g).connect(env);
         osc.start(t);
-        osc.stop(t + 2.3);
+        osc.stop(t + end + 0.1);
       });
     });
   }
@@ -394,6 +421,9 @@
     $('views').innerHTML = toggles(VIEWS, 'view', state.view, v => v);
     $('sounds').innerHTML = toggles(SOUNDS, 'sound', state.sound, v => v);
     $('play').disabled = state.sound !== 'on';
+    $('instrument').disabled = state.sound !== 'on';
+    $('instrument').innerHTML = Object.entries(INSTRUMENTS).map(([k, i]) =>
+      `<option value="${k}" ${k === state.instrument ? 'selected' : ''}>${i.label}</option>`).join('');
     const roots = MODES[state.mode].roots;
     $('roots').innerHTML = roots.map((r, i) =>
       `<button data-root="${i}" class="${i === state.root ? 'active' : ''}">${noteName(parseNote(r))}</button>`).join('');
@@ -522,6 +552,11 @@
     try { localStorage.setItem('akkordkompass.sound', v); } catch (e) {}
   });
   $('play').addEventListener('click', () => playChord(currentChord().midis));
+  $('instrument').addEventListener('change', e => {
+    state.instrument = e.target.value;
+    try { localStorage.setItem('akkordkompass.instrument', state.instrument); } catch (e2) {}
+    playChord(currentChord().midis);
+  });
 
   $('chords').addEventListener('click', e => {
     const b = e.target.closest('[data-chord]');
