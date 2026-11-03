@@ -178,6 +178,18 @@
       background: var(--black-key); z-index: 2; border-radius: 0 0 3px 3px;
       margin-left: calc(100% / var(--whites) * -0.3);
     }
+    /* Tonleiter-Klaviatur: nur Skalentöne spielbar, Rest abgedunkelt */
+    .scalekb .key.white.muted { background: #7d786d; }
+    .scalekb .key.black.muted { background: #0d0d10; opacity: 0.45; }
+    .scalekb .key.muted { cursor: default; }
+    .scalekb .key.white.inscale { background: var(--white-key); }
+    .scalekb .key.inscale .lab { color: var(--key-text); font-weight: 600; }
+    .scalekb .key.black.inscale { background: #3a3f55; }
+    .scalekb .key.black.inscale .lab { color: #fff; }
+    .scalekb .key.isroot.white { background: #ffd9d3; }
+    .scalekb .key.isroot.black { background: #8a3a32; }
+    .scalekb .key.isroot .lab { color: #b8321f; }
+    .scalekb .key.black.isroot .lab { color: #ffd9d3; }
     .key.on { background: var(--accent); }
     .key.on.root { background: var(--root); }
     .key .lab {
@@ -280,6 +292,12 @@
       <button id="play" type="button" title="Akkord abspielen">▶ Anhören</button>
     </div>
     <div class="keyboard" id="keyboard"></div>
+  </section>
+
+  <section>
+    <h2>Tonleiter-Klaviatur</h2>
+    <div class="detail" id="scaleDetail"></div>
+    <div class="keyboard scalekb" id="scaleKeyboard"></div>
   </section>
 </main>
 
@@ -717,6 +735,7 @@
   });
 
   function pressKey(k) {
+    if (k.classList.contains('muted')) return;
     const m = +k.dataset.midi;
     playChord([m]);
     if (state.sound !== 'on') return;
@@ -724,10 +743,28 @@
     setTimeout(() => k.classList.remove('pressed'), 180);
   }
 
+  function renderScaleKeyboard() {
+    const el = $('scaleKeyboard');
+    const low = KB_OCTAVES >= 4 ? 36 : 48;
+    el.style.setProperty('--whites', 7 * KB_OCTAVES + 1);
+    el.innerHTML = keyboardHtml(low, KB_OCTAVES);
+    const byPc = {};
+    scale.forEach(n => { byPc[n.pc] = n; });
+    el.querySelectorAll('.key').forEach(k => {
+      const m = +k.dataset.midi, n = byPc[m % 12];
+      k.classList.toggle('inscale', !!n);
+      k.classList.toggle('muted', !n);
+      k.classList.toggle('isroot', !!n && n.pc === scale[0].pc);
+      k.querySelector('.lab').textContent = n ? noteName(n) : (m % 12 === 0 ? 'C' + octaveOf(m) : '');
+    });
+    $('scaleDetail').innerHTML = `<b>${scale.map(n => noteName(n)).join(' ')}</b> nur die ${scale.length} Töne der Tonleiter, Grundton rötlich`;
+  }
+
   function renderKeyboard() {
     const c = currentChord();
     const oct = octavesForWidth();
     if (oct !== KB_OCTAVES) { KB_OCTAVES = oct; kbLow = -1; }
+    renderScaleKeyboard();
     let low = KB_OCTAVES >= 4 ? 36 : 48; // C2 bzw. C3
     const hi = Math.max(...c.midis), lo = Math.min(...c.midis);
     while (hi > low + 12 * KB_OCTAVES) low += 12;
@@ -794,7 +831,7 @@
     }
     if (e.target.id === 'closeEditor') { state.editing = false; renderSettings(); }
   });
-  ['tryout', 'keyboard'].forEach(id => {
+  ['tryout', 'keyboard', 'scaleKeyboard'].forEach(id => {
     const el = $(id);
     let lastKey = null;
     el.addEventListener('pointerdown', e => {
