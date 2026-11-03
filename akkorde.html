@@ -311,6 +311,33 @@
     '4,4,3': { label: 'übermäßig mit großer Septime', sym: '+maj7', mpc: 'augMaj7', lower: false, rsuf: '+maj7' },
     '4,4,2': { label: 'übermäßig mit kleiner Septime', sym: '+7', mpc: 'aug7', lower: false, rsuf: '+7' },
   };
+  // Weitere Akkordaufbauten (Quarten-, Sekund-, Sext-, Add9-, Powerchords); Schlüssel = Intervalle in Halbtönen
+  const OTHERS = {
+    '5,2':   { label: 'Quartvorhalt (sus4)', sym: 'sus4', mpc: 'sus4', lower: false, rsuf: 'sus4' },
+    '2,5':   { label: 'Sekundvorhalt (sus2)', sym: 'sus2', mpc: 'sus2', lower: false, rsuf: 'sus2' },
+    '7':     { label: 'Powerchord (Quinte)', sym: '5', mpc: '5', lower: false, rsuf: '5' },
+    '7,3':   { label: 'Septime ohne Terz', sym: '7(no3)', mpc: '7no3', lower: false, rsuf: '7' },
+    '7,4':   { label: 'große Septime ohne Terz', sym: 'maj7(no3)', mpc: 'maj7no3', lower: false, rsuf: 'maj7' },
+    '4,3,2': { label: 'Dur mit Sexte', sym: '6', mpc: 'maj6', lower: false, rsuf: '6' },
+    '3,4,2': { label: 'Moll mit Sexte', sym: 'm6', mpc: 'min6', lower: true, rsuf: '6' },
+    '3,3,3': { label: 'vermindert mit Sexte', sym: '°6', mpc: 'dim6', lower: true, rsuf: '°6' },
+    '3,3,2': { label: 'vermindert mit kleiner Sexte', sym: '°♭6', mpc: 'dimb6', lower: true, rsuf: '°' },
+    '4,3,7': { label: 'Dur mit None (add9)', sym: 'add9', mpc: 'add9', lower: false, rsuf: 'add9' },
+    '3,4,7': { label: 'Moll mit None (madd9)', sym: 'madd9', mpc: 'minadd9', lower: true, rsuf: 'add9' },
+    '3,3,7': { label: 'vermindert mit None', sym: '°add9', mpc: 'dimadd9', lower: true, rsuf: '°add9' },
+    '4,3,6': { label: 'Dur mit kleiner None', sym: 'add♭9', mpc: 'addb9', lower: false, rsuf: 'add♭9' },
+    '3,4,6': { label: 'Moll mit kleiner None', sym: 'madd♭9', mpc: 'minaddb9', lower: true, rsuf: 'add♭9' },
+    '3,3,6': { label: 'vermindert mit kleiner None', sym: '°add♭9', mpc: 'dimaddb9', lower: true, rsuf: '°add♭9' },
+    '4,4,7': { label: 'übermäßig mit None', sym: '+add9', mpc: 'augadd9', lower: false, rsuf: '+add9' },
+    '4,4,6': { label: 'übermäßig mit kleiner None', sym: '+add♭9', mpc: 'augaddb9', lower: false, rsuf: '+add♭9' },
+    '3,4,1': { label: 'Moll mit kleiner Sexte', sym: 'm♭6', mpc: 'minb6', lower: true, rsuf: '♭6' },
+    '6,1':   { label: 'übermäßiger Quartvorhalt', sym: 'sus♯4', mpc: 'sus#4', lower: false, rsuf: 'sus♯4' },
+    '5,1':   { label: 'Quartvorhalt mit verminderter Quinte', sym: 'sus4♭5', mpc: 'sus4b5', lower: true, rsuf: 'sus4♭5' },
+    '1,6':   { label: 'kleiner Sekundvorhalt', sym: 'sus♭2', mpc: 'susb2', lower: false, rsuf: 'sus♭2' },
+    '2,4':   { label: 'Sekundvorhalt mit verminderter Quinte', sym: 'sus2♭5', mpc: 'sus2b5', lower: true, rsuf: 'sus2♭5' },
+    '6':     { label: 'verminderte Quinte', sym: '♭5', mpc: 'b5', lower: true, rsuf: '♭5' },
+    '6,4':   { label: 'Septime mit verminderter Quinte, ohne Terz', sym: '7♭5(no3)', mpc: '7b5no3', lower: true, rsuf: '7♭5' },
+  };
   const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
   const TONE_NAMES = { 1: 'Grundton', 2: 'Sekunde', 3: 'Terz', 4: 'Quarte', 5: 'Quinte', 6: 'Sexte', 7: 'Septime', 8: 'Oktave', 9: 'None' };
 
@@ -361,7 +388,7 @@
     const midis = degrees.map(k => scaleMidi(steps, rootMidi, d + k - 1));
     const intervals = midis.slice(1).map((m, i) => m - midis[i]);
     const key = intervals.join(',');
-    const quality = (midis.length === 3 ? TRIADS[key] : midis.length === 4 ? SEVENTHS[key] : null) || null;
+    const quality = (midis.length === 3 ? TRIADS[key] : midis.length === 4 ? SEVENTHS[key] : null) || OTHERS[key] || null;
     let roman = ROMAN[d % 7];
     if (quality) roman = (quality.lower ? roman.toLowerCase() : roman) + quality.rsuf;
     return { degree: d, degrees, notes, midis, quality, roman };
