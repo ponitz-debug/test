@@ -209,8 +209,8 @@
     <div class="setting">
       <div class="label">Tonart</div>
       <div>
-        <div class="row" id="modes"></div>
         <div class="row" id="roots"></div>
+        <div class="row"><select id="scaleSelect" aria-label="Skala"></select></div>
         <div class="keyname" id="keyname"></div>
       </div>
     </div>
@@ -289,13 +289,33 @@
   const ACC = { '-2': '𝄫', '-1': '♭', '0': '', '1': '♯', '2': '𝄪' };
   const ASCII_ACC = { '-2': 'bb', '-1': 'b', '0': '', '1': '#', '2': '##' };
 
-  // Grundtöne in der gebräuchlichen Schreibweise der jeweiligen Tonart
-  const MODES = {
-    major: { label: 'Dur', mpc: 'Major', suffix: '-Dur', steps: [2, 2, 1, 2, 2, 2, 1],
-             roots: ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'] },
-    minor: { label: 'Moll', mpc: 'Natural Minor', suffix: '-Moll', steps: [2, 1, 2, 2, 1, 2, 2],
-             roots: ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'] },
+  // Grundtöne in der gebräuchlichen Schreibweise: Dur-artig (Db, Eb, F#, Ab, Bb) oder Moll-artig (C#, Eb, F#, G#, Bb)
+  const ROOTS = {
+    major: ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'],
+    minor: ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'],
   };
+  // Skalen wie im MPC-Menü "Scale" (Reihenfolge wie auf dem Gerät); steps = Halbtonschritte
+  const MODES = {
+    major:      { label: 'Dur', mpc: 'Major', kind: 'major', steps: [2, 2, 1, 2, 2, 2, 1] },
+    minor:      { label: 'Moll (natürlich)', mpc: 'Natural Minor', kind: 'minor', steps: [2, 1, 2, 2, 1, 2, 2] },
+    harmonic:   { label: 'Moll (harmonisch)', mpc: 'Harmonic Minor', kind: 'minor', steps: [2, 1, 2, 2, 1, 3, 1] },
+    pentMajor:  { label: 'Pentatonik Dur', mpc: 'Pentatonic Major', kind: 'major', steps: [2, 2, 3, 2, 3] },
+    pentMinor:  { label: 'Pentatonik Moll', mpc: 'Pentatonic Minor', kind: 'minor', steps: [3, 2, 2, 3, 2] },
+    dorian:     { label: 'Dorisch', mpc: 'Dorian', kind: 'minor', steps: [2, 1, 2, 2, 2, 1, 2] },
+    phrygian:   { label: 'Phrygisch', mpc: 'Phrygian', kind: 'minor', steps: [1, 2, 2, 2, 1, 2, 2] },
+    lydian:     { label: 'Lydisch', mpc: 'Lydian', kind: 'major', steps: [2, 2, 2, 1, 2, 2, 1] },
+    mixolydian: { label: 'Mixolydisch', mpc: 'Mixolydian', kind: 'major', steps: [2, 2, 1, 2, 2, 1, 2] },
+    aeolian:    { label: 'Äolisch', mpc: 'Aeolian', kind: 'minor', steps: [2, 1, 2, 2, 1, 2, 2] },
+    locrian:    { label: 'Lokrisch', mpc: 'Locrian', kind: 'minor', steps: [1, 2, 2, 1, 2, 2, 2] },
+    blues:      { label: 'Blues', mpc: 'Blues', kind: 'minor', steps: [3, 2, 1, 1, 3, 2] },
+    flamenco:   { label: 'Flamenco', mpc: 'Flamenco', kind: 'major', steps: [1, 3, 1, 2, 1, 3, 1] },
+    gypsy:      { label: 'Gypsy', mpc: 'Gypsy', kind: 'minor', steps: [2, 1, 3, 1, 1, 2, 2] },
+    hungarian:  { label: 'Hungarian Gypsy', mpc: 'Hungarian Gypsy', kind: 'minor', steps: [2, 1, 3, 1, 1, 3, 1] },
+    persian:    { label: 'Persisch', mpc: 'Persian', kind: 'major', steps: [1, 3, 1, 1, 2, 3, 1] },
+    bebop:      { label: 'Major Bebop', mpc: 'Major Bebop', kind: 'major', steps: [2, 2, 1, 2, 1, 1, 2, 1] },
+    wholeTone:  { label: 'Ganzton', mpc: 'Whole Tone', kind: 'major', steps: [2, 2, 2, 2, 2, 2] },
+  };
+  const rootsOf = mode => ROOTS[MODES[mode].kind];
 
   const NAMINGS = { de: 'Deutsch', intl: 'International' };
   const VIEWS = { piano: 'Klaviatur', mpc: 'MPC' };
@@ -359,7 +379,7 @@
     '6':     { label: 'verminderte Quinte', sym: '♭5', mpc: 'b5', lower: true, rsuf: '♭5' },
     '6,4':   { label: 'Septime mit verminderter Quinte, ohne Terz', sym: '7♭5(no3)', mpc: '7b5no3', lower: true, rsuf: '7♭5' },
   };
-  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
   const TONE_NAMES = { 1: 'Grundton', 2: 'Sekunde', 3: 'Terz', 4: 'Quarte', 5: 'Quinte', 6: 'Sexte', 7: 'Septime', 8: 'Oktave', 9: 'None' };
 
   function parseNote(str) {
@@ -380,37 +400,55 @@
   }
   const octaveOf = midi => Math.floor(midi / 12) - 1; // 60 = C4
 
-  function buildScale(root, steps) {
+  function buildScale(root, steps, kind) {
     const notes = [root];
     let li = LETTERS.indexOf(root.letter), pc = root.pc;
-    for (let i = 0; i < 6; i++) {
+    if (steps.length === 7) {
+      // Jede Stufe bekommt den nächsten Stammton (C D E F G A H), Vorzeichen ergeben sich daraus
+      for (let i = 0; i < 6; i++) {
+        pc = (pc + steps[i]) % 12;
+        li = (li + 1) % 7;
+        const letter = LETTERS[li];
+        let acc = pc - LETTER_PC[letter];
+        if (acc > 6) acc -= 12;
+        if (acc < -6) acc += 12;
+        notes.push({ letter, acc, pc });
+      }
+      return notes;
+    }
+    // Pentatonik, Blues, Ganzton, Bebop: Schreibweise aus der verwandten Dur- bzw. Moll-Tonleiter übernehmen;
+    // Töne außerhalb davon bekommen ♭ in B-Tonarten, ♯ in Kreuz-Tonarten (C: Moll-artig ♭, Dur-artig ♯)
+    const parent = buildScale(root, MODES[kind === 'minor' ? 'minor' : 'major'].steps);
+    const byPc = {};
+    parent.forEach(n => { byPc[n.pc] = n; });
+    const preferFlat = parent.some(n => n.acc < 0) || (!parent.some(n => n.acc > 0) && kind === 'minor');
+    for (let i = 0; i < steps.length - 1; i++) {
       pc = (pc + steps[i]) % 12;
-      li = (li + 1) % 7;
-      const letter = LETTERS[li];
-      let acc = pc - LETTER_PC[letter];
-      if (acc > 6) acc -= 12;
-      if (acc < -6) acc += 12;
-      notes.push({ letter, acc, pc });
+      if (byPc[pc]) { notes.push(byPc[pc]); continue; }
+      const letter = LETTERS.find(l => LETTER_PC[l] === (preferFlat ? (pc + 1) : (pc + 11)) % 12);
+      notes.push({ letter, acc: preferFlat ? -1 : 1, pc });
     }
     return notes;
   }
 
   // Skalenton an Position i (0 = Grundton, 7 = Grundton eine Oktave höher) als MIDI-Nummer
   function scaleMidi(steps, rootMidi, i) {
-    let m = rootMidi + 12 * Math.floor(i / 7);
-    for (let k = 0; k < i % 7; k++) m += steps[k];
+    const n = steps.length;
+    let m = rootMidi + 12 * Math.floor(i / n);
+    for (let k = 0; k < i % n; k++) m += steps[k];
     return m;
   }
 
   // Akkord auf Skalenposition d nach Formel; rootMidi = Grundton der Skala
   function buildChord(scale, steps, rootMidi, d, formula) {
     const degrees = formula.split('-').map(Number);
-    const notes = degrees.map(k => scale[(d + k - 1) % 7]);
+    const n = scale.length;
+    const notes = degrees.map(k => scale[(d + k - 1) % n]);
     const midis = degrees.map(k => scaleMidi(steps, rootMidi, d + k - 1));
     const intervals = midis.slice(1).map((m, i) => m - midis[i]);
     const key = intervals.join(',');
     const quality = (midis.length === 3 ? TRIADS[key] : midis.length === 4 ? SEVENTHS[key] : null) || OTHERS[key] || null;
-    let roman = ROMAN[d % 7];
+    let roman = ROMAN[d % n];
     if (quality) roman = (quality.lower ? roman.toLowerCase() : roman) + quality.rsuf;
     return { degree: d, degrees, notes, midis, quality, roman };
   }
@@ -515,7 +553,7 @@
 
   function recompute() {
     const mode = MODES[state.mode];
-    scale = buildScale(parseNote(mode.roots[state.root]), mode.steps);
+    scale = buildScale(parseNote(rootsOf(state.mode)[state.root]), mode.steps, mode.kind);
     // Klaviatur-Ansicht: Akkorde ab Grundton in Oktave 3 (wie "Start on root note" auf der MPC)
     chords = scale.map((_, d) => buildChord(scale, mode.steps, 48 + scale[0].pc, d, state.formula));
     // MPC: 16 Pads ab Grundton in Oktave 3 (Bb3 = 58), "Start on root note"
@@ -530,7 +568,8 @@
     `<button data-${attr}="${k}" class="${k === current ? 'active' : ''}">${labelOf(v)}</button>`).join('');
 
   function renderSettings() {
-    $('modes').innerHTML = toggles(MODES, 'mode', state.mode, m => m.label);
+    $('scaleSelect').innerHTML = Object.entries(MODES).map(([k, m]) =>
+      `<option value="${k}" ${k === state.mode ? 'selected' : ''}>${m.label} · ${m.mpc}</option>`).join('');
     $('namings').innerHTML = toggles(NAMINGS, 'naming', state.naming, v => v);
     $('views').innerHTML = toggles(VIEWS, 'view', state.view, v => v);
     $('sounds').innerHTML = toggles(SOUNDS, 'sound', state.sound, v => v);
@@ -538,14 +577,21 @@
     $('instrument').disabled = state.sound !== 'on';
     $('instrument').innerHTML = Object.entries(INSTRUMENTS).map(([k, i]) =>
       `<option value="${k}" ${k === state.instrument ? 'selected' : ''}>${i.label}</option>`).join('');
-    const roots = MODES[state.mode].roots;
+    const roots = rootsOf(state.mode);
     $('roots').innerHTML = roots.map((r, i) =>
       `<button data-root="${i}" class="${i === state.root ? 'active' : ''}">${noteName(parseNote(r))}</button>`).join('');
+    const mode = MODES[state.mode];
     let name = noteName(scale[0]);
-    if (state.mode === 'minor') name = name.toLowerCase();
-    const accs = scale.reduce((s, n) => s + Math.abs(n.acc), 0);
-    const sig = accs === 0 ? 'keine Vorzeichen' : `${accs} ${scale.some(n => n.acc < 0) ? '♭' : '♯'}`;
-    $('keyname').innerHTML = `${name}${MODES[state.mode].suffix}<span>${sig} · Tonleiter: ${scale.map(n => noteName(n)).join(' · ')}</span>`;
+    if (state.mode === 'major') name += '-Dur';
+    else if (state.mode === 'minor') name = name.toLowerCase() + '-Moll';
+    else if (state.mode === 'harmonic') name = name.toLowerCase() + '-Moll (harmonisch)';
+    else name += ' ' + mode.label;
+    let sig = '';
+    if (['major', 'minor', 'aeolian'].includes(state.mode)) {
+      const accs = scale.reduce((s, n) => s + Math.abs(n.acc), 0);
+      sig = (accs === 0 ? 'keine Vorzeichen' : `${accs} ${scale.some(n => n.acc < 0) ? '♭' : '♯'}`) + ' · ';
+    }
+    $('keyname').innerHTML = `${name}<span>${sig}${scale.length} Töne: ${scale.map(n => noteName(n)).join(' · ')}</span>`;
     $('editInstrument').disabled = state.sound !== 'on';
     $('editInstrument').classList.toggle('active', state.editing);
     renderEditor();
@@ -587,7 +633,7 @@
   }
 
   function renderMpc() {
-    const roots = MODES[state.mode].roots;
+    const roots = rootsOf(state.mode);
     $('mpcRoot').innerHTML = roots.map((r, i) =>
       `<option value="${i}" ${i === state.root ? 'selected' : ''}>${noteName(parseNote(r), 'device')}</option>`).join('');
     $('mpcScale').innerHTML = Object.entries(MODES).map(([k, m]) =>
@@ -601,7 +647,7 @@
       for (let col = 0; col < 4; col++) {
         const n = row * 4 + col;
         const c = pads[n];
-        const cls = ['mpad', c.degree % 7 === 0 ? 'isroot' : '', n === state.pad ? 'active' : ''].join(' ');
+        const cls = ['mpad', c.degree % scale.length === 0 ? 'isroot' : '', n === state.pad ? 'active' : ''].join(' ');
         html += `<button class="${cls}" data-pad="${n}" type="button">
           <span class="num"><b>C</b> ${String(n + 1).padStart(2, '0')}</span>
           ${noteName(c.notes[0], 'device')}${octaveOf(c.midis[0])}</button>`;
@@ -720,7 +766,6 @@
       renderAll();
     });
   }
-  onToggle('modes', 'mode', v => { state.mode = v; });
   onToggle('roots', 'root', v => { state.root = +v; });
   onToggle('namings', 'naming', v => { state.naming = v; });
   onToggle('views', 'view', v => { state.view = v; });
@@ -797,7 +842,9 @@
   $('listChord').addEventListener('change', e => setFormula(e.target.value));
   $('mpcChord').addEventListener('change', e => setFormula(e.target.value));
   $('mpcRoot').addEventListener('change', e => { state.root = +e.target.value; renderAll(); });
-  $('mpcScale').addEventListener('change', e => { state.mode = e.target.value; renderAll(); });
+  const setMode = v => { state.mode = v; state.chord = 0; state.pad = 0; renderAll(); };
+  $('scaleSelect').addEventListener('change', e => setMode(e.target.value));
+  $('mpcScale').addEventListener('change', e => setMode(e.target.value));
   $('octDown').addEventListener('click', () => { if (state.mpcOctave > -2) { state.mpcOctave--; recompute(); renderSelection(); } });
   $('octUp').addEventListener('click', () => { if (state.mpcOctave < 3) { state.mpcOctave++; recompute(); renderSelection(); } });
 
