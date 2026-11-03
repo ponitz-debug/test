@@ -17,6 +17,12 @@
       --white-key: #f5f1e8;
       --black-key: #1a1a1f;
       --key-text: #2a2a33;
+      /* MPC-Display */
+      --mpc-bg: #101114;
+      --mpc-pad: #3b3e45;
+      --mpc-yellow: #e9e23c;
+      --mpc-red: #e5392c;
+      --mpc-text: #e8e8ea;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -42,14 +48,14 @@
 
     .row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
-    button {
+    button, select {
       font: inherit; cursor: pointer; color: var(--fg);
       background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
       padding: 0.5rem 0.9rem; transition: background 0.15s, border-color 0.15s;
     }
     button:hover { background: var(--surface-2); }
     button.active { background: var(--accent); border-color: var(--accent); color: #1a1a1f; font-weight: 600; }
-    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
     .mode .row { margin-bottom: 0.6rem; }
     .spellings { align-items: center; }
@@ -60,27 +66,54 @@
     .keyname span { color: var(--muted); font-size: 1rem; margin-left: 0.6rem; }
 
     .chords { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.6rem; }
-    .chord {
-      display: grid; gap: 0.2rem; text-align: left; padding: 0.8rem 0.9rem;
-    }
+    .chord { display: grid; gap: 0.2rem; text-align: left; padding: 0.8rem 0.9rem; }
     .chord .roman { font-size: 0.85rem; color: var(--muted); }
     .chord.active .roman { color: inherit; }
     .chord .name { font-size: 1.4rem; font-weight: 600; }
     .chord .notes { font-size: 0.85rem; color: var(--muted); }
     .chord.active .notes { color: inherit; }
 
-    .pads { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; max-width: 560px; }
-    .pad {
-      aspect-ratio: 1; display: grid; grid-template-rows: auto 1fr auto; text-align: left;
-      padding: 0.6rem 0.7rem; border-radius: 10px; background: var(--surface-2);
-      border: 1px solid var(--line);
+    /* --- MPC Pad Perform ------------------------------------------------ */
+    .mpc {
+      display: grid; grid-template-columns: 220px 1fr; gap: 1rem;
+      background: var(--mpc-bg); border-radius: 12px; padding: 1rem;
+      border: 1px solid #2a2c33; color: var(--mpc-text);
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
     }
-    .pad .num { font-size: 0.7rem; color: var(--muted); }
-    .pad .name { font-size: 1.25rem; font-weight: 700; align-self: center; }
-    .pad .roman { font-size: 0.75rem; color: var(--muted); }
-    .pad.active .num, .pad.active .roman { color: inherit; }
-    .pad.empty { background: var(--surface); opacity: 0.4; }
-    @media (max-width: 480px) { .pad .name { font-size: 1rem; } .pad { padding: 0.4rem 0.5rem; } }
+    .mpc-side { display: grid; gap: 0.4rem; align-content: start; }
+    .mpc-label {
+      font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #a3a6b0;
+      text-align: center; margin-top: 0.6rem; border-top: 1px solid #2a2c33; padding-top: 0.5rem;
+    }
+    .mpc-side select, .mpc-side .mpc-static, .mpc-side button {
+      background: #1a1b20; border: 1px solid #2f3138; border-radius: 4px; color: var(--mpc-text);
+      padding: 0.45rem 0.6rem; font-size: 1.05rem; font-weight: 600;
+    }
+    .mpc-side select.root { border-color: var(--mpc-red); }
+    .mpc-selects { display: grid; grid-template-columns: 1fr 1.6fr; gap: 0.4rem; }
+    .mpc-oct { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.4rem; align-items: center; }
+    .mpc-oct span { text-align: center; font-weight: 700; }
+    .mpc-side button:hover { background: #2a2c33; }
+
+    .mpc-pads { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.45rem; }
+    .mpad {
+      aspect-ratio: 1.2; position: relative; display: flex; align-items: center; justify-content: center;
+      background: var(--mpc-pad); border: 3px solid var(--mpc-yellow); color: var(--mpc-yellow);
+      border-radius: 2px; font-size: clamp(1rem, 3.2vw, 1.7rem); font-weight: 600; cursor: pointer;
+      padding: 0; transition: filter 0.1s;
+    }
+    .mpad:hover { filter: brightness(1.2); background: #4a4d55; }
+    .mpad.isroot { border-color: var(--mpc-red); color: #ff6a60; }
+    .mpad.active { background: #5a5d66; box-shadow: 0 0 0 2px #fff inset; }
+    .mpad .num { position: absolute; top: 4px; left: 7px; font-size: 0.65rem; color: #cfd1d8; font-weight: 600; }
+    .mpad .num b { color: #fff; }
+
+    @media (max-width: 640px) {
+      .mpc { grid-template-columns: 1fr; }
+      .mpc-side { grid-template-columns: 1fr 1fr; }
+      .mpc-side .mpc-label { grid-column: 1 / -1; }
+      .mpc-selects { grid-column: 1 / -1; }
+    }
 
     .detail { font-size: 1.1rem; margin-bottom: 0.8rem; }
     .detail b { font-size: 1.5rem; margin-right: 0.6rem; }
@@ -93,9 +126,7 @@
       border: 1px solid var(--line);
     }
     .key { position: relative; }
-    .key.white {
-      flex: 1; background: var(--white-key); border-right: 1px solid #c9c4b8;
-    }
+    .key.white { flex: 1; background: var(--white-key); border-right: 1px solid #c9c4b8; }
     .key.black {
       position: absolute; top: 0; height: 60%; width: calc(100% / 15 * 0.6);
       background: var(--black-key); z-index: 2; border-radius: 0 0 4px 4px;
@@ -131,10 +162,33 @@
     <div class="keyname" id="keyname"></div>
   </section>
 
-  <section>
+  <section id="listview">
     <h2>Akkorde der Tonart</h2>
     <div class="chords" id="chords"></div>
-    <div class="pads" id="pads" hidden></div>
+  </section>
+
+  <section id="mpcview" hidden>
+    <h2>Pad Perform · Chords</h2>
+    <div class="mpc">
+      <aside class="mpc-side">
+        <div class="mpc-label">Scale &amp; Octave</div>
+        <div class="mpc-selects">
+          <select id="mpcRoot" class="root" aria-label="Grundton"></select>
+          <select id="mpcScale" aria-label="Skala"></select>
+        </div>
+        <div class="mpc-label">Chord</div>
+        <select id="mpcChord" aria-label="Akkordformel"></select>
+        <div class="mpc-label">Banks</div>
+        <div class="mpc-static">Start on root note</div>
+        <div class="mpc-label">Octave</div>
+        <div class="mpc-oct">
+          <button id="octDown" type="button">−</button>
+          <span id="octVal">0</span>
+          <button id="octUp" type="button">+</button>
+        </div>
+      </aside>
+      <div class="mpc-pads" id="mpcpads"></div>
+    </div>
   </section>
 
   <section>
@@ -149,11 +203,12 @@
   const LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
   const LETTER_PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
   const ACC = { '-2': '𝄫', '-1': '♭', '0': '', '1': '♯', '2': '𝄪' };
+  const ASCII_ACC = { '-2': 'bb', '-1': 'b', '0': '', '1': '#', '2': '##' };
 
   const MODES = {
-    major: { label: 'Dur', suffix: '-Dur', steps: [2, 2, 1, 2, 2, 2, 1],
+    major: { label: 'Dur', mpc: 'Major', suffix: '-Dur', steps: [2, 2, 1, 2, 2, 2, 1],
              roots: ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'] },
-    minor: { label: 'Moll', suffix: '-Moll', steps: [2, 1, 2, 2, 1, 2, 2],
+    minor: { label: 'Moll', mpc: 'Natural Minor', suffix: '-Moll', steps: [2, 1, 2, 2, 1, 2, 2],
              roots: ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'] },
   };
 
@@ -163,26 +218,40 @@
     sharp: { label: '♯', roots: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] },
     flat:  { label: '♭', roots: ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'] },
   };
-  // Benennung: Deutsch (H/B), International (B/B♭) oder wie auf dem Akai-MPC-Display (Cmaj, Dmin, Bb)
-  const NAMINGS = {
-    de:   { label: 'Deutsch', quality: { '': '', m: 'm', '°': '°', '+': '+' } },
-    intl: { label: 'International', quality: { '': '', m: 'm', '°': '°', '+': '+' } },
-    mpc:  { label: 'MPC', quality: { '': 'maj', m: 'min', '°': 'dim', '+': 'aug' } },
-  };
-  const ASCII_ACC = { '-2': 'bb', '-1': 'b', '0': '', '1': '#', '2': '##' };
-
   function rootsFor(mode, spelling) {
     return SPELLINGS[spelling].roots || MODES[mode].roots;
   }
 
+  // Benennung: Deutsch (H/B), International (B/B♭) oder wie auf dem Akai-MPC-Display
+  const NAMINGS = {
+    de:   { label: 'Deutsch' },
+    intl: { label: 'International' },
+    mpc:  { label: 'MPC' },
+  };
+
+  // Akkordformeln als Skalenstufen relativ zum Pad (wie im MPC-Menü "Chord")
+  const FORMULAS = [
+    '1-3-5', '1-3-5-7', '1-3-5-6', '1-3-5-9', '1-4-5', '1-5-7', '1-2-5', '1-5',
+  ];
+
   const TRIADS = {
-    '4,3': { label: 'Dur', sym: '', lower: false, rsuf: '' },
-    '3,4': { label: 'Moll', sym: 'm', lower: true, rsuf: '' },
-    '3,3': { label: 'vermindert', sym: '°', lower: true, rsuf: '°' },
-    '4,4': { label: 'übermäßig', sym: '+', lower: false, rsuf: '+' },
+    '4,3': { label: 'Dur', sym: '', mpc: 'maj', lower: false, rsuf: '' },
+    '3,4': { label: 'Moll', sym: 'm', mpc: 'min', lower: true, rsuf: '' },
+    '3,3': { label: 'vermindert', sym: '°', mpc: 'dim', lower: true, rsuf: '°' },
+    '4,4': { label: 'übermäßig', sym: '+', mpc: 'aug', lower: false, rsuf: '+' },
+  };
+  const SEVENTHS = {
+    '4,3,4': { label: 'Dur mit großer Septime', sym: 'maj7', mpc: 'maj7', lower: false, rsuf: 'maj7' },
+    '4,3,3': { label: 'Dominantseptakkord', sym: '7', mpc: '7', lower: false, rsuf: '7' },
+    '3,4,3': { label: 'Moll-Septakkord', sym: 'm7', mpc: 'min7', lower: true, rsuf: '7' },
+    '3,3,4': { label: 'halbvermindert', sym: 'ø7', mpc: 'min7b5', lower: true, rsuf: 'ø7' },
+    '3,3,3': { label: 'vermindert (Septakkord)', sym: '°7', mpc: 'dim7', lower: true, rsuf: '°7' },
+    '3,4,4': { label: 'Moll mit großer Septime', sym: 'mMaj7', mpc: 'minMaj7', lower: true, rsuf: 'mMaj7' },
+    '4,4,3': { label: 'übermäßig mit großer Septime', sym: '+maj7', mpc: 'augMaj7', lower: false, rsuf: '+maj7' },
+    '4,4,2': { label: 'übermäßig mit kleiner Septime', sym: '+7', mpc: 'aug7', lower: false, rsuf: '+7' },
   };
   const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
-  const TONE_NAMES = ['Grundton', 'Terz', 'Quinte'];
+  const TONE_NAMES = { 1: 'Grundton', 2: 'Sekunde', 3: 'Terz', 4: 'Quarte', 5: 'Quinte', 6: 'Sexte', 7: 'Septime', 8: 'Oktave', 9: 'None' };
 
   function parseNote(str) {
     const letter = str[0];
@@ -190,16 +259,17 @@
     return { letter, acc, pc: (LETTER_PC[letter] + acc + 12) % 12 };
   }
 
-  // Deutsche Schreibweise: H statt B, B statt B♭
   function noteName(n) {
     if (state.naming === 'mpc') return n.letter + ASCII_ACC[n.acc];
     if (state.naming === 'intl') return n.letter + ACC[n.acc];
+    // Deutsch: H statt B, B statt B♭
     if (n.letter === 'B' && n.acc === 0) return 'H';
     if (n.letter === 'B' && n.acc === -1) return 'B';
     if (n.letter === 'B' && n.acc === -2) return 'B♭'; // Heses
     if (n.letter === 'B' && n.acc === 1) return 'H♯';
     return n.letter + ACC[n.acc];
   }
+  const octaveOf = midi => Math.floor(midi / 12) - 1; // 60 = C4
 
   function buildScale(root, steps) {
     const notes = [root];
@@ -216,30 +286,54 @@
     return notes;
   }
 
-  function buildChords(scale) {
-    return scale.map((_, d) => {
-      const notes = [0, 2, 4].map(o => scale[(d + o) % 7]);
-      const intervals = [1, 2].map(i => (notes[i].pc - notes[i - 1].pc + 12) % 12);
-      const q = TRIADS[intervals.join(',')];
-      let roman = q.lower ? ROMAN[d].toLowerCase() : ROMAN[d];
-      roman += q.rsuf;
-      // Töne auf die Klaviatur legen: Grundton in der ersten Oktave (C4 = 60)
-      const midis = [60 + notes[0].pc];
-      intervals.forEach(iv => midis.push(midis[midis.length - 1] + iv));
-      const name = noteName(notes[0]) + NAMINGS[state.naming].quality[q.sym];
-      return { degree: d, notes, quality: q, roman, name, midis };
-    });
+  // Skalenton an Position i (0 = Grundton, 7 = Grundton eine Oktave höher) als MIDI-Nummer
+  function scaleMidi(scale, steps, rootMidi, i) {
+    let m = rootMidi + 12 * Math.floor(i / 7);
+    for (let k = 0; k < i % 7; k++) m += steps[k];
+    return m;
+  }
+
+  // Akkord auf Stufe d (0-basiert) nach Formel, Grundton des Pads bei rootMidi + Stufenabstand
+  function buildChord(scale, steps, rootMidi, d, formula) {
+    const degrees = formula.split('-').map(Number);
+    const notes = degrees.map(k => scale[(d + k - 1) % 7]);
+    const midis = degrees.map(k => scaleMidi(scale, steps, rootMidi, d + k - 1));
+    const intervals = midis.slice(1).map((m, i) => m - midis[i]);
+    const key = intervals.join(',');
+    const quality = (midis.length === 3 ? TRIADS[key] : midis.length === 4 ? SEVENTHS[key] : null) || null;
+    let roman = ROMAN[d % 7];
+    if (quality) roman = (quality.lower ? roman.toLowerCase() : roman) + quality.rsuf;
+    const rootName = noteName(notes[0]);
+    const name = quality
+      ? rootName + (state.naming === 'mpc' ? quality.mpc : quality.sym)
+      : rootName + ' ' + formula;
+    return { degree: d, degrees, notes, midis, quality, roman, name };
   }
 
   // --- Zustand ------------------------------------------------------------
-  const state = { mode: 'major', root: 0, chord: 0, spelling: 'auto', naming: 'de', octave: 0 };
-  let scale = [], chords = [];
+  const state = {
+    mode: 'major', root: 0, chord: 0, spelling: 'auto', naming: 'de',
+    formula: '1-3-5', mpcOctave: 0, pad: 0,
+  };
+  let scale = [], chords = [], pads = [];
 
   function recompute() {
     const mode = MODES[state.mode];
     const roots = rootsFor(state.mode, state.spelling);
     scale = buildScale(parseNote(roots[state.root]), mode.steps);
-    chords = buildChords(scale);
+    // Listenansicht: Dreiklänge ab Oktave 4
+    chords = scale.map((_, d) => buildChord(scale, mode.steps, 60 + scale[0].pc, d, '1-3-5'));
+    // MPC: 16 Pads ab Grundton in Oktave 3 (Bb3 = 58), "Start on root note"
+    const padRoot = 48 + scale[0].pc + 12 * state.mpcOctave;
+    pads = Array.from({ length: 16 }, (_, n) => {
+      const c = buildChord(scale, mode.steps, padRoot, n, state.formula);
+      c.pad = n;
+      return c;
+    });
+  }
+
+  function currentChord() {
+    return state.naming === 'mpc' ? pads[state.pad] : chords[state.chord];
   }
 
   // --- Rendering ----------------------------------------------------------
@@ -261,36 +355,18 @@
     $('roots').innerHTML = roots.map((r, i) =>
       `<button data-root="${i}" class="${i === state.root ? 'active' : ''}">${noteName(parseNote(r))}</button>`).join('');
     let name = noteName(scale[0]);
-    if (state.mode === 'minor') name = name.toLowerCase();
+    if (state.mode === 'minor' && state.naming !== 'mpc') name = name.toLowerCase();
     const accs = scale.reduce((s, n) => s + Math.abs(n.acc), 0);
     const sig = accs === 0 ? 'keine Vorzeichen' : `${accs} ${scale.some(n => n.acc < 0) ? '♭' : '♯'}`;
-    $('keyname').innerHTML = `${name}${MODES[state.mode].suffix}<span>${sig} · Tonleiter: ${scale.map(noteName).join(' · ')}</span>`;
-  }
-
-  // MPC-Ansicht: 16 Pads, Pad 1 unten links, Stufen fortlaufend über die Oktaven
-  function renderPads() {
-    const mpc = state.naming === 'mpc';
-    $('pads').hidden = !mpc;
-    $('chords').hidden = mpc;
-    if (!mpc) return;
-    const pads = [];
-    for (let row = 3; row >= 0; row--) {
-      for (let col = 0; col < 4; col++) {
-        const n = row * 4 + col; // 0-basiert
-        const d = n % 7, oct = Math.floor(n / 7);
-        const c = chords[d];
-        const active = d === state.chord && oct === state.octave;
-        pads.push(`<button class="pad ${active ? 'active' : ''}" data-chord="${d}" data-octave="${oct}">
-          <span class="num">Pad ${n + 1}${oct ? ' · +' + oct + ' Okt.' : ''}</span>
-          <span class="name">${c.name}</span>
-          <span class="roman">${c.roman}</span></button>`);
-      }
-    }
-    $('pads').innerHTML = pads.join('');
+    const suffix = state.naming === 'mpc' ? ' ' + MODES[state.mode].mpc : MODES[state.mode].suffix;
+    $('keyname').innerHTML = `${name}${suffix}<span>${sig} · Tonleiter: ${scale.map(noteName).join(' · ')}</span>`;
   }
 
   function renderChords() {
-    renderPads();
+    const mpc = state.naming === 'mpc';
+    $('listview').hidden = mpc;
+    $('mpcview').hidden = !mpc;
+    if (mpc) { renderMpc(); return; }
     $('chords').innerHTML = chords.map((c, i) => `
       <button class="chord ${i === state.chord ? 'active' : ''}" data-chord="${i}">
         <span class="roman">${c.roman}</span>
@@ -299,44 +375,69 @@
       </button>`).join('');
   }
 
+  function renderMpc() {
+    const roots = rootsFor(state.mode, state.spelling);
+    $('mpcRoot').innerHTML = roots.map((r, i) =>
+      `<option value="${i}" ${i === state.root ? 'selected' : ''}>${noteName(parseNote(r))}</option>`).join('');
+    $('mpcScale').innerHTML = Object.entries(MODES).map(([k, m]) =>
+      `<option value="${k}" ${k === state.mode ? 'selected' : ''}>${m.mpc}</option>`).join('');
+    $('mpcChord').innerHTML = FORMULAS.map(f =>
+      `<option value="${f}" ${f === state.formula ? 'selected' : ''}>${f}</option>`).join('');
+    $('octVal').textContent = (state.mpcOctave > 0 ? '+' : '') + state.mpcOctave;
+    // Pad 01 unten links, Pad 16 oben rechts
+    let html = '';
+    for (let row = 3; row >= 0; row--) {
+      for (let col = 0; col < 4; col++) {
+        const n = row * 4 + col;
+        const c = pads[n];
+        const cls = ['mpad', c.degree % 7 === 0 ? 'isroot' : '', n === state.pad ? 'active' : ''].join(' ');
+        html += `<button class="${cls}" data-pad="${n}" type="button">
+          <span class="num"><b>C</b> ${String(n + 1).padStart(2, '0')}</span>
+          ${noteName(c.notes[0])}${octaveOf(c.midis[0])}</button>`;
+      }
+    }
+    $('mpcpads').innerHTML = html;
+  }
+
   function renderDetail() {
-    const c = chords[state.chord];
-    $('detail').innerHTML = `<b>${c.name}</b> ${c.quality.label} · Stufe ${c.roman}<br>` +
-      c.notes.map((n, i) => `<span class="tone">${noteName(n)}<small>${TONE_NAMES[i]}</small></span>`).join('');
+    const c = currentChord();
+    const mpc = state.naming === 'mpc';
+    const head = mpc
+      ? `<b>${c.name}</b> Pad ${String(c.pad + 1).padStart(2, '0')} · ${state.formula} · Stufe ${c.roman}`
+      : `<b>${c.name}</b> ${c.quality ? c.quality.label : ''} · Stufe ${c.roman}`;
+    $('detail').innerHTML = head + '<br>' +
+      c.notes.map((n, i) => `<span class="tone">${noteName(n)}${mpc ? octaveOf(c.midis[i]) : ''}<small>${TONE_NAMES[c.degrees[i]] || c.degrees[i]}</small></span>`).join('');
   }
 
   const WHITE_PCS = [0, 2, 4, 5, 7, 9, 11];
-  let kbLow = 60; // unterstes C der Klaviatur (C4 = 60), zwei Oktaven
+  let kbLow = 60; // unterstes C der Klaviatur, zwei Oktaven
 
   function buildKeyboard(low) {
     kbLow = low;
-    const kb = $('keyboard');
     let html = '', whiteIndex = 0;
     for (let m = low; m <= low + 24; m++) {
-      const pc = m % 12;
-      if (WHITE_PCS.includes(pc)) {
+      if (WHITE_PCS.includes(m % 12)) {
         html += `<div class="key white" data-midi="${m}"><span class="lab"></span></div>`;
         whiteIndex++;
       } else {
         html += `<div class="key black" data-midi="${m}" style="left: calc(100% / 15 * ${whiteIndex})"><span class="lab"></span></div>`;
       }
     }
-    kb.innerHTML = html;
+    $('keyboard').innerHTML = html;
   }
 
   function renderKeyboard() {
-    const c = chords[state.chord];
-    const midis = c.midis.map(m => m + 12 * state.octave);
-    const low = Math.floor(midis[0] / 12) * 12;
+    const c = currentChord();
+    const low = Math.floor(c.midis[0] / 12) * 12;
     if (low !== kbLow) buildKeyboard(low);
     document.querySelectorAll('#keyboard .key').forEach(k => {
       const m = +k.dataset.midi;
-      const idx = midis.indexOf(m);
+      const idx = c.midis.indexOf(m);
       k.classList.toggle('on', idx >= 0);
       k.classList.toggle('root', idx === 0);
       const lab = k.querySelector('.lab');
       if (idx >= 0) lab.textContent = noteName(c.notes[idx]);
-      else if (m % 12 === 0) lab.textContent = 'C' + (Math.floor(m / 12) - 1);
+      else if (m % 12 === 0) lab.textContent = 'C' + octaveOf(m);
       else lab.textContent = '';
     });
   }
@@ -349,44 +450,43 @@
     renderDetail();
     renderKeyboard();
   }
-
-  // --- Interaktion --------------------------------------------------------
-  $('modes').addEventListener('click', e => {
-    const b = e.target.closest('[data-mode]');
-    if (!b) return;
-    state.mode = b.dataset.mode;
-    renderAll();
-  });
-  $('spellings').addEventListener('click', e => {
-    const b = e.target.closest('[data-spelling]');
-    if (!b) return;
-    state.spelling = b.dataset.spelling;
-    renderAll();
-  });
-  $('namings').addEventListener('click', e => {
-    const b = e.target.closest('[data-naming]');
-    if (!b) return;
-    state.naming = b.dataset.naming;
-    state.octave = 0;
-    renderAll();
-  });
-  $('roots').addEventListener('click', e => {
-    const b = e.target.closest('[data-root]');
-    if (!b) return;
-    state.root = +b.dataset.root;
-    renderAll();
-  });
-  function onChordClick(e) {
-    const b = e.target.closest('[data-chord]');
-    if (!b) return;
-    state.chord = +b.dataset.chord;
-    state.octave = +(b.dataset.octave || 0);
+  function renderSelection() {
     renderChords();
     renderDetail();
     renderKeyboard();
   }
-  $('chords').addEventListener('click', onChordClick);
-  $('pads').addEventListener('click', onChordClick);
+
+  // --- Interaktion --------------------------------------------------------
+  function onToggle(id, attr, apply) {
+    $(id).addEventListener('click', e => {
+      const b = e.target.closest(`[data-${attr}]`);
+      if (!b) return;
+      apply(b.dataset[attr]);
+      renderAll();
+    });
+  }
+  onToggle('modes', 'mode', v => { state.mode = v; });
+  onToggle('spellings', 'spelling', v => { state.spelling = v; });
+  onToggle('namings', 'naming', v => { state.naming = v; });
+  onToggle('roots', 'root', v => { state.root = +v; });
+
+  $('chords').addEventListener('click', e => {
+    const b = e.target.closest('[data-chord]');
+    if (!b) return;
+    state.chord = +b.dataset.chord;
+    renderSelection();
+  });
+  $('mpcpads').addEventListener('click', e => {
+    const b = e.target.closest('[data-pad]');
+    if (!b) return;
+    state.pad = +b.dataset.pad;
+    renderSelection();
+  });
+  $('mpcRoot').addEventListener('change', e => { state.root = +e.target.value; renderAll(); });
+  $('mpcScale').addEventListener('change', e => { state.mode = e.target.value; renderAll(); });
+  $('mpcChord').addEventListener('change', e => { state.formula = e.target.value; recompute(); renderSelection(); });
+  $('octDown').addEventListener('click', () => { if (state.mpcOctave > -2) { state.mpcOctave--; recompute(); renderSelection(); } });
+  $('octUp').addEventListener('click', () => { if (state.mpcOctave < 3) { state.mpcOctave++; recompute(); renderSelection(); } });
 
   buildKeyboard(60);
   renderAll();
