@@ -36,7 +36,7 @@
       padding: 2rem max(16px, 4vw) 3rem;
     }
 
-    main { max-width: 960px; margin: 0 auto; display: grid; gap: 2rem; }
+    main { max-width: 1040px; margin: 0 auto; display: grid; gap: 2rem; }
 
     h1 { font-size: 2rem; letter-spacing: 1px; }
     h1 small { display: block; font-size: 0.9rem; font-weight: 400; color: var(--muted); letter-spacing: 0; margin-top: 0.3rem; }
@@ -46,7 +46,7 @@
       color: var(--muted); margin-bottom: 0.8rem;
     }
 
-    .row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 
     button, select {
       font: inherit; cursor: pointer; color: var(--fg);
@@ -57,13 +57,20 @@
     button.active { background: var(--accent); border-color: var(--accent); color: #1a1a1f; font-weight: 600; }
     button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-    .mode .row { margin-bottom: 0.6rem; }
-    .spellings { align-items: center; }
-    .hint { font-size: 0.85rem; color: var(--muted); margin-right: 0.2rem; }
-    button.small { padding: 0.3rem 0.7rem; font-size: 0.9rem; }
+    /* Einstellungen: drei beschriftete Zeilen */
+    .settings { display: grid; gap: 0.8rem; }
+    .setting { display: grid; grid-template-columns: 110px 1fr; gap: 0.6rem; align-items: start; }
+    .setting .label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); padding-top: 0.7rem; }
+    .setting .row + .row { margin-top: 0.5rem; }
+    @media (max-width: 520px) { .setting { grid-template-columns: 1fr; } .setting .label { padding-top: 0; } }
 
-    .keyname { font-size: 1.4rem; margin-top: 0.8rem; }
+    .keyname { font-size: 1.4rem; margin-top: 0.4rem; }
     .keyname span { color: var(--muted); font-size: 1rem; margin-left: 0.6rem; }
+
+    .section-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.6rem; margin-bottom: 0.8rem; }
+    .section-head h2 { margin: 0; }
+    .section-head label { font-size: 0.85rem; color: var(--muted); display: flex; gap: 0.5rem; align-items: center; }
+    .section-head select { padding: 0.3rem 0.6rem; }
 
     .chords { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.6rem; }
     .chord { display: grid; gap: 0.2rem; text-align: left; padding: 0.8rem 0.9rem; }
@@ -115,35 +122,39 @@
       .mpc-selects { grid-column: 1 / -1; }
     }
 
+    /* --- Klaviatur, vier Oktaven --------------------------------------- */
     .detail { font-size: 1.1rem; margin-bottom: 0.8rem; }
     .detail b { font-size: 1.5rem; margin-right: 0.6rem; }
     .detail .tone { display: inline-block; margin-right: 0.8rem; }
     .detail .tone small { color: var(--muted); margin-left: 0.2rem; }
 
     .keyboard {
-      position: relative; display: flex; height: 190px;
+      --whites: 28;
+      position: relative; display: flex; height: 160px;
       background: #000; border-radius: 8px; overflow: hidden;
       border: 1px solid var(--line);
     }
     .key { position: relative; }
     .key.white { flex: 1; background: var(--white-key); border-right: 1px solid #c9c4b8; }
     .key.black {
-      position: absolute; top: 0; height: 60%; width: calc(100% / 15 * 0.6);
-      background: var(--black-key); z-index: 2; border-radius: 0 0 4px 4px;
-      margin-left: calc(100% / 15 * -0.3);
+      position: absolute; top: 0; height: 60%; width: calc(100% / var(--whites) * 0.6);
+      background: var(--black-key); z-index: 2; border-radius: 0 0 3px 3px;
+      margin-left: calc(100% / var(--whites) * -0.3);
     }
     .key.on { background: var(--accent); }
     .key.on.root { background: var(--root); }
     .key .lab {
-      position: absolute; bottom: 8px; left: 0; right: 0; text-align: center;
-      font-size: 0.8rem; font-weight: 600; color: var(--key-text);
+      position: absolute; bottom: 6px; left: 0; right: 0; text-align: center;
+      font-size: 0.7rem; font-weight: 600; color: var(--key-text); overflow: hidden;
     }
-    .key.black .lab { color: #fff; }
+    .key.black .lab { color: #fff; font-size: 0.6rem; }
     .key.white:not(.on) .lab { color: #b8b2a4; font-weight: 400; }
 
-    @media (max-width: 600px) {
-      .keyboard { height: 140px; }
-      .key .lab { font-size: 0.65rem; }
+    @media (max-width: 700px) {
+      .keyboard { height: 120px; }
+      .key .lab { font-size: 0.55rem; }
+      .key.black .lab { font-size: 0.5rem; }
+      .key.white:not(.on) .lab { display: none; }
     }
   </style>
 </head>
@@ -153,17 +164,30 @@
     <h1>Akkordkompass <small>Tonart wählen, Akkorde sehen, Töne auf der Klaviatur finden</small></h1>
   </header>
 
-  <section class="mode">
-    <h2>Tonart</h2>
-    <div class="row" id="modes"></div>
-    <div class="row" id="roots"></div>
-    <div class="row spellings" id="spellings"></div>
-    <div class="row spellings" id="namings"></div>
-    <div class="keyname" id="keyname"></div>
+  <section class="settings">
+    <div class="setting">
+      <div class="label">Tonart</div>
+      <div>
+        <div class="row" id="modes"></div>
+        <div class="row" id="roots"></div>
+        <div class="keyname" id="keyname"></div>
+      </div>
+    </div>
+    <div class="setting">
+      <div class="label">Schreibweise</div>
+      <div class="row" id="namings"></div>
+    </div>
+    <div class="setting">
+      <div class="label">Ansicht</div>
+      <div class="row" id="views"></div>
+    </div>
   </section>
 
   <section id="listview">
-    <h2>Akkorde der Tonart</h2>
+    <div class="section-head">
+      <h2>Akkorde der Tonart</h2>
+      <label>Akkordaufbau <select id="listChord" aria-label="Akkordformel"></select></label>
+    </div>
     <div class="chords" id="chords"></div>
   </section>
 
@@ -205,6 +229,7 @@
   const ACC = { '-2': '𝄫', '-1': '♭', '0': '', '1': '♯', '2': '𝄪' };
   const ASCII_ACC = { '-2': 'bb', '-1': 'b', '0': '', '1': '#', '2': '##' };
 
+  // Grundtöne in der gebräuchlichen Schreibweise der jeweiligen Tonart
   const MODES = {
     major: { label: 'Dur', mpc: 'Major', suffix: '-Dur', steps: [2, 2, 1, 2, 2, 2, 1],
              roots: ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'] },
@@ -212,27 +237,11 @@
              roots: ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'] },
   };
 
-  // Schreibweise der Grundtöne: automatisch (gebräuchlichste Tonart), nur ♯ oder nur ♭
-  const SPELLINGS = {
-    auto:  { label: 'automatisch', roots: null },
-    sharp: { label: '♯', roots: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'] },
-    flat:  { label: '♭', roots: ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'] },
-  };
-  function rootsFor(mode, spelling) {
-    return SPELLINGS[spelling].roots || MODES[mode].roots;
-  }
+  const NAMINGS = { de: 'Deutsch', intl: 'International' };
+  const VIEWS = { piano: 'Klaviatur', mpc: 'MPC' };
 
-  // Benennung: Deutsch (H/B), International (B/B♭) oder wie auf dem Akai-MPC-Display
-  const NAMINGS = {
-    de:   { label: 'Deutsch' },
-    intl: { label: 'International' },
-    mpc:  { label: 'MPC' },
-  };
-
-  // Akkordformeln als Skalenstufen relativ zum Pad (wie im MPC-Menü "Chord")
-  const FORMULAS = [
-    '1-3-5', '1-3-5-7', '1-3-5-6', '1-3-5-9', '1-4-5', '1-5-7', '1-2-5', '1-5',
-  ];
+  // Akkordformeln als Skalenstufen relativ zum Grundton des Akkords (wie im MPC-Menü "Chord")
+  const FORMULAS = ['1-3-5', '1-3-5-7', '1-3-5-6', '1-3-5-9', '1-4-5', '1-5-7', '1-2-5', '1-5'];
 
   const TRIADS = {
     '4,3': { label: 'Dur', sym: '', mpc: 'maj', lower: false, rsuf: '' },
@@ -259,10 +268,10 @@
     return { letter, acc, pc: (LETTER_PC[letter] + acc + 12) % 12 };
   }
 
-  function noteName(n) {
-    if (state.naming === 'mpc') return n.letter + ASCII_ACC[n.acc];
-    if (state.naming === 'intl') return n.letter + ACC[n.acc];
-    // Deutsch: H statt B, B statt B♭
+  // Notenname in der gewählten Schreibweise; 'device' = wie auf dem MPC-Display (Bb, F#)
+  function noteName(n, naming = state.naming) {
+    if (naming === 'device') return n.letter + ASCII_ACC[n.acc];
+    if (naming === 'intl') return n.letter + ACC[n.acc];
     if (n.letter === 'B' && n.acc === 0) return 'H';
     if (n.letter === 'B' && n.acc === -1) return 'B';
     if (n.letter === 'B' && n.acc === -2) return 'B♭'; // Heses
@@ -287,104 +296,92 @@
   }
 
   // Skalenton an Position i (0 = Grundton, 7 = Grundton eine Oktave höher) als MIDI-Nummer
-  function scaleMidi(scale, steps, rootMidi, i) {
+  function scaleMidi(steps, rootMidi, i) {
     let m = rootMidi + 12 * Math.floor(i / 7);
     for (let k = 0; k < i % 7; k++) m += steps[k];
     return m;
   }
 
-  // Akkord auf Stufe d (0-basiert) nach Formel, Grundton des Pads bei rootMidi + Stufenabstand
+  // Akkord auf Skalenposition d nach Formel; rootMidi = Grundton der Skala
   function buildChord(scale, steps, rootMidi, d, formula) {
     const degrees = formula.split('-').map(Number);
     const notes = degrees.map(k => scale[(d + k - 1) % 7]);
-    const midis = degrees.map(k => scaleMidi(scale, steps, rootMidi, d + k - 1));
+    const midis = degrees.map(k => scaleMidi(steps, rootMidi, d + k - 1));
     const intervals = midis.slice(1).map((m, i) => m - midis[i]);
     const key = intervals.join(',');
     const quality = (midis.length === 3 ? TRIADS[key] : midis.length === 4 ? SEVENTHS[key] : null) || null;
     let roman = ROMAN[d % 7];
     if (quality) roman = (quality.lower ? roman.toLowerCase() : roman) + quality.rsuf;
-    const rootName = noteName(notes[0]);
-    const name = quality
-      ? rootName + (state.naming === 'mpc' ? quality.mpc : quality.sym)
-      : rootName + ' ' + formula;
-    return { degree: d, degrees, notes, midis, quality, roman, name };
+    return { degree: d, degrees, notes, midis, quality, roman };
+  }
+  function chordName(c, naming = state.naming) {
+    const root = noteName(c.notes[0], naming);
+    if (!c.quality) return root + ' ' + c.degrees.join('-');
+    return root + (naming === 'device' ? c.quality.mpc : c.quality.sym);
   }
 
   // --- Zustand ------------------------------------------------------------
   const state = {
-    mode: 'major', root: 0, chord: 0, spelling: 'auto', naming: 'de',
-    formula: '1-3-5', mpcOctave: 0, pad: 0,
+    mode: 'major', root: 0, naming: 'de', view: 'piano',
+    formula: '1-3-5', chord: 0, pad: 0, mpcOctave: 0,
   };
   let scale = [], chords = [], pads = [];
 
   function recompute() {
     const mode = MODES[state.mode];
-    const roots = rootsFor(state.mode, state.spelling);
-    scale = buildScale(parseNote(roots[state.root]), mode.steps);
-    // Listenansicht: Dreiklänge ab Oktave 4
-    chords = scale.map((_, d) => buildChord(scale, mode.steps, 60 + scale[0].pc, d, '1-3-5'));
+    scale = buildScale(parseNote(mode.roots[state.root]), mode.steps);
+    // Klaviatur-Ansicht: Akkorde ab Grundton in Oktave 4
+    chords = scale.map((_, d) => buildChord(scale, mode.steps, 60 + scale[0].pc, d, state.formula));
     // MPC: 16 Pads ab Grundton in Oktave 3 (Bb3 = 58), "Start on root note"
     const padRoot = 48 + scale[0].pc + 12 * state.mpcOctave;
-    pads = Array.from({ length: 16 }, (_, n) => {
-      const c = buildChord(scale, mode.steps, padRoot, n, state.formula);
-      c.pad = n;
-      return c;
-    });
+    pads = Array.from({ length: 16 }, (_, n) => buildChord(scale, mode.steps, padRoot, n, state.formula));
   }
-
-  function currentChord() {
-    return state.naming === 'mpc' ? pads[state.pad] : chords[state.chord];
-  }
+  const currentChord = () => state.view === 'mpc' ? pads[state.pad] : chords[state.chord];
 
   // --- Rendering ----------------------------------------------------------
   const $ = id => document.getElementById(id);
+  const toggles = (obj, attr, current, labelOf) => Object.entries(obj).map(([k, v]) =>
+    `<button data-${attr}="${k}" class="${k === current ? 'active' : ''}">${labelOf(v)}</button>`).join('');
 
-  function renderModes() {
-    $('modes').innerHTML = Object.entries(MODES).map(([k, m]) =>
-      `<button data-mode="${k}" class="${k === state.mode ? 'active' : ''}">${m.label}</button>`).join('');
-    $('spellings').innerHTML = '<span class="hint">Schreibweise:</span>' +
-      Object.entries(SPELLINGS).map(([k, s]) =>
-        `<button data-spelling="${k}" class="small ${k === state.spelling ? 'active' : ''}">${s.label}</button>`).join('');
-    $('namings').innerHTML = '<span class="hint">Benennung:</span>' +
-      Object.entries(NAMINGS).map(([k, n]) =>
-        `<button data-naming="${k}" class="small ${k === state.naming ? 'active' : ''}">${n.label}</button>`).join('');
-  }
-
-  function renderRoots() {
-    const roots = rootsFor(state.mode, state.spelling);
+  function renderSettings() {
+    $('modes').innerHTML = toggles(MODES, 'mode', state.mode, m => m.label);
+    $('namings').innerHTML = toggles(NAMINGS, 'naming', state.naming, v => v);
+    $('views').innerHTML = toggles(VIEWS, 'view', state.view, v => v);
+    const roots = MODES[state.mode].roots;
     $('roots').innerHTML = roots.map((r, i) =>
       `<button data-root="${i}" class="${i === state.root ? 'active' : ''}">${noteName(parseNote(r))}</button>`).join('');
     let name = noteName(scale[0]);
-    if (state.mode === 'minor' && state.naming !== 'mpc') name = name.toLowerCase();
+    if (state.mode === 'minor') name = name.toLowerCase();
     const accs = scale.reduce((s, n) => s + Math.abs(n.acc), 0);
     const sig = accs === 0 ? 'keine Vorzeichen' : `${accs} ${scale.some(n => n.acc < 0) ? '♭' : '♯'}`;
-    const suffix = state.naming === 'mpc' ? ' ' + MODES[state.mode].mpc : MODES[state.mode].suffix;
-    $('keyname').innerHTML = `${name}${suffix}<span>${sig} · Tonleiter: ${scale.map(noteName).join(' · ')}</span>`;
+    $('keyname').innerHTML = `${name}${MODES[state.mode].suffix}<span>${sig} · Tonleiter: ${scale.map(n => noteName(n)).join(' · ')}</span>`;
   }
 
   function renderChords() {
-    const mpc = state.naming === 'mpc';
+    const mpc = state.view === 'mpc';
     $('listview').hidden = mpc;
     $('mpcview').hidden = !mpc;
     if (mpc) { renderMpc(); return; }
+    $('listChord').innerHTML = FORMULAS.map(f =>
+      `<option value="${f}" ${f === state.formula ? 'selected' : ''}>${f}</option>`).join('');
     $('chords').innerHTML = chords.map((c, i) => `
       <button class="chord ${i === state.chord ? 'active' : ''}" data-chord="${i}">
         <span class="roman">${c.roman}</span>
-        <span class="name">${c.name}</span>
-        <span class="notes">${c.notes.map(noteName).join(' ')}</span>
+        <span class="name">${chordName(c)}</span>
+        <span class="notes">${c.notes.map(n => noteName(n)).join(' ')}</span>
       </button>`).join('');
   }
 
   function renderMpc() {
-    const roots = rootsFor(state.mode, state.spelling);
+    const roots = MODES[state.mode].roots;
     $('mpcRoot').innerHTML = roots.map((r, i) =>
-      `<option value="${i}" ${i === state.root ? 'selected' : ''}>${noteName(parseNote(r))}</option>`).join('');
+      `<option value="${i}" ${i === state.root ? 'selected' : ''}>${noteName(parseNote(r), 'device')}</option>`).join('');
     $('mpcScale').innerHTML = Object.entries(MODES).map(([k, m]) =>
       `<option value="${k}" ${k === state.mode ? 'selected' : ''}>${m.mpc}</option>`).join('');
     $('mpcChord').innerHTML = FORMULAS.map(f =>
       `<option value="${f}" ${f === state.formula ? 'selected' : ''}>${f}</option>`).join('');
     $('octVal').textContent = (state.mpcOctave > 0 ? '+' : '') + state.mpcOctave;
-    // Pad 01 unten links, Pad 16 oben rechts
+    // Pad 01 unten links, Pad 16 oben rechts; Beschriftung wie auf dem Gerät
     let html = '';
     for (let row = 3; row >= 0; row--) {
       for (let col = 0; col < 4; col++) {
@@ -393,7 +390,7 @@
         const cls = ['mpad', c.degree % 7 === 0 ? 'isroot' : '', n === state.pad ? 'active' : ''].join(' ');
         html += `<button class="${cls}" data-pad="${n}" type="button">
           <span class="num"><b>C</b> ${String(n + 1).padStart(2, '0')}</span>
-          ${noteName(c.notes[0])}${octaveOf(c.midis[0])}</button>`;
+          ${noteName(c.notes[0], 'device')}${octaveOf(c.midis[0])}</button>`;
       }
     }
     $('mpcpads').innerHTML = html;
@@ -401,34 +398,39 @@
 
   function renderDetail() {
     const c = currentChord();
-    const mpc = state.naming === 'mpc';
-    const head = mpc
-      ? `<b>${c.name}</b> Pad ${String(c.pad + 1).padStart(2, '0')} · ${state.formula} · Stufe ${c.roman}`
-      : `<b>${c.name}</b> ${c.quality ? c.quality.label : ''} · Stufe ${c.roman}`;
-    $('detail').innerHTML = head + '<br>' +
-      c.notes.map((n, i) => `<span class="tone">${noteName(n)}${mpc ? octaveOf(c.midis[i]) : ''}<small>${TONE_NAMES[c.degrees[i]] || c.degrees[i]}</small></span>`).join('');
+    const mpc = state.view === 'mpc';
+    const where = mpc ? `Pad ${String(state.pad + 1).padStart(2, '0')} · ` : '';
+    const quality = c.quality ? c.quality.label : 'Akkordaufbau ' + state.formula;
+    $('detail').innerHTML = `<b>${chordName(c)}</b> ${where}${quality} · Stufe ${c.roman}<br>` +
+      c.notes.map((n, i) => `<span class="tone">${noteName(n)}${octaveOf(c.midis[i])}<small>${TONE_NAMES[c.degrees[i]] || c.degrees[i]}</small></span>`).join('');
   }
 
+  // Klaviatur: vier Oktaven, Standard C2–C6, verschiebt sich oktavweise, wenn der Akkord nicht passt
   const WHITE_PCS = [0, 2, 4, 5, 7, 9, 11];
-  let kbLow = 60; // unterstes C der Klaviatur, zwei Oktaven
+  const KB_OCTAVES = 4;
+  let kbLow = -1;
 
   function buildKeyboard(low) {
     kbLow = low;
     let html = '', whiteIndex = 0;
-    for (let m = low; m <= low + 24; m++) {
+    for (let m = low; m < low + 12 * KB_OCTAVES; m++) {
       if (WHITE_PCS.includes(m % 12)) {
         html += `<div class="key white" data-midi="${m}"><span class="lab"></span></div>`;
         whiteIndex++;
       } else {
-        html += `<div class="key black" data-midi="${m}" style="left: calc(100% / 15 * ${whiteIndex})"><span class="lab"></span></div>`;
+        html += `<div class="key black" data-midi="${m}" style="left: calc(100% / var(--whites) * ${whiteIndex})"><span class="lab"></span></div>`;
       }
     }
+    $('keyboard').style.setProperty('--whites', 7 * KB_OCTAVES);
     $('keyboard').innerHTML = html;
   }
 
   function renderKeyboard() {
     const c = currentChord();
-    const low = Math.floor(c.midis[0] / 12) * 12;
+    let low = 36; // C2
+    const hi = Math.max(...c.midis), lo = Math.min(...c.midis);
+    while (hi >= low + 12 * KB_OCTAVES) low += 12;
+    while (lo < low) low -= 12;
     if (low !== kbLow) buildKeyboard(low);
     document.querySelectorAll('#keyboard .key').forEach(k => {
       const m = +k.dataset.midi;
@@ -444,8 +446,7 @@
 
   function renderAll() {
     recompute();
-    renderModes();
-    renderRoots();
+    renderSettings();
     renderChords();
     renderDetail();
     renderKeyboard();
@@ -466,9 +467,9 @@
     });
   }
   onToggle('modes', 'mode', v => { state.mode = v; });
-  onToggle('spellings', 'spelling', v => { state.spelling = v; });
-  onToggle('namings', 'naming', v => { state.naming = v; });
   onToggle('roots', 'root', v => { state.root = +v; });
+  onToggle('namings', 'naming', v => { state.naming = v; });
+  onToggle('views', 'view', v => { state.view = v; });
 
   $('chords').addEventListener('click', e => {
     const b = e.target.closest('[data-chord]');
@@ -482,13 +483,14 @@
     state.pad = +b.dataset.pad;
     renderSelection();
   });
+  const setFormula = f => { state.formula = f; recompute(); renderSelection(); };
+  $('listChord').addEventListener('change', e => setFormula(e.target.value));
+  $('mpcChord').addEventListener('change', e => setFormula(e.target.value));
   $('mpcRoot').addEventListener('change', e => { state.root = +e.target.value; renderAll(); });
   $('mpcScale').addEventListener('change', e => { state.mode = e.target.value; renderAll(); });
-  $('mpcChord').addEventListener('change', e => { state.formula = e.target.value; recompute(); renderSelection(); });
   $('octDown').addEventListener('click', () => { if (state.mpcOctave > -2) { state.mpcOctave--; recompute(); renderSelection(); } });
   $('octUp').addEventListener('click', () => { if (state.mpcOctave < 3) { state.mpcOctave++; recompute(); renderSelection(); } });
 
-  buildKeyboard(60);
   renderAll();
 </script>
 </body>
