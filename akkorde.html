@@ -330,8 +330,8 @@
   function recompute() {
     const mode = MODES[state.mode];
     scale = buildScale(parseNote(mode.roots[state.root]), mode.steps);
-    // Klaviatur-Ansicht: Akkorde ab Grundton in Oktave 4
-    chords = scale.map((_, d) => buildChord(scale, mode.steps, 60 + scale[0].pc, d, state.formula));
+    // Klaviatur-Ansicht: Akkorde ab Grundton in Oktave 3 (wie "Start on root note" auf der MPC)
+    chords = scale.map((_, d) => buildChord(scale, mode.steps, 48 + scale[0].pc, d, state.formula));
     // MPC: 16 Pads ab Grundton in Oktave 3 (Bb3 = 58), "Start on root note"
     const padRoot = 48 + scale[0].pc + 12 * state.mpcOctave;
     pads = Array.from({ length: 16 }, (_, n) => buildChord(scale, mode.steps, padRoot, n, state.formula));
