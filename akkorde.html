@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Akkordkompass</title>
+  <style>
+    :root {
+      --bg: #141826;
+      --surface: #1c2133;
+      --surface-2: #272d44;
+      --fg: #eceef5;
+      --muted: #9aa1b8;
+      --accent: #f2b544;
+      --root: #ff6b5a;
+      --line: rgba(255, 255, 255, 0.08);
+      --white-key: #f5f1e8;
+      --black-key: #1a1a1f;
+      --key-text: #2a2a33;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      padding: 2rem max(16px, 4vw) 3rem;
+    }
+
+    main { max-width: 960px; margin: 0 auto; display: grid; gap: 2rem; }
+
+    h1 { font-size: 2rem; letter-spacing: 1px; }
+    h1 small { display: block; font-size: 0.9rem; font-weight: 400; color: var(--muted); letter-spacing: 0; margin-top: 0.3rem; }
+
+    h2 {
+      font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.12em;
+      color: var(--muted); margin-bottom: 0.8rem;
+    }
+
+    .row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+    button {
+      font: inherit; cursor: pointer; color: var(--fg);
+      background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+      padding: 0.5rem 0.9rem; transition: background 0.15s, border-color 0.15s;
+    }
+    button:hover { background: var(--surface-2); }
+    button.active { background: var(--accent); border-color: var(--accent); color: #1a1a1f; font-weight: 600; }
+    button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    .mode .row { margin-bottom: 0.6rem; }
+
+    .keyname { font-size: 1.4rem; margin-top: 0.8rem; }
+    .keyname span { color: var(--muted); font-size: 1rem; margin-left: 0.6rem; }
+
+    .chords { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.6rem; }
+    .chord {
+      display: grid; gap: 0.2rem; text-align: left; padding: 0.8rem 0.9rem;
+    }
+    .chord .roman { font-size: 0.85rem; color: var(--muted); }
+    .chord.active .roman { color: inherit; }
+    .chord .name { font-size: 1.4rem; font-weight: 600; }
+    .chord .notes { font-size: 0.85rem; color: var(--muted); }
+    .chord.active .notes { color: inherit; }
+
+    .detail { font-size: 1.1rem; margin-bottom: 0.8rem; }
+    .detail b { font-size: 1.5rem; margin-right: 0.6rem; }
+    .detail .tone { display: inline-block; margin-right: 0.8rem; }
+    .detail .tone small { color: var(--muted); margin-left: 0.2rem; }
+
+    .keyboard {
+      position: relative; display: flex; height: 190px;
+      background: #000; border-radius: 8px; overflow: hidden;
+      border: 1px solid var(--line);
+    }
+    .key { position: relative; }
+    .key.white {
+      flex: 1; background: var(--white-key); border-right: 1px solid #c9c4b8;
+    }
+    .key.black {
+      position: absolute; top: 0; height: 60%; width: calc(100% / 15 * 0.6);
+      background: var(--black-key); z-index: 2; border-radius: 0 0 4px 4px;
+      margin-left: calc(100% / 15 * -0.3);
+    }
+    .key.on { background: var(--accent); }
+    .key.on.root { background: var(--root); }
+    .key .lab {
+      position: absolute; bottom: 8px; left: 0; right: 0; text-align: center;
+      font-size: 0.8rem; font-weight: 600; color: var(--key-text);
+    }
+    .key.black .lab { color: #fff; }
+    .key.white:not(.on) .lab { color: #b8b2a4; font-weight: 400; }
+
+    @media (max-width: 600px) {
+      .keyboard { height: 140px; }
+      .key .lab { font-size: 0.65rem; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Akkordkompass <small>Tonart wählen, Akkorde sehen, Töne auf der Klaviatur finden</small></h1>
+  </header>
+
+  <section class="mode">
+    <h2>Tonart</h2>
+    <div class="row" id="modes"></div>
+    <div class="row" id="roots"></div>
+    <div class="keyname" id="keyname"></div>
+  </section>
+
+  <section>
+    <h2>Akkorde der Tonart</h2>
+    <div class="chords" id="chords"></div>
+  </section>
+
+  <section>
+    <h2>Klaviatur</h2>
+    <div class="detail" id="detail"></div>
+    <div class="keyboard" id="keyboard"></div>
+  </section>
+</main>
+
+<script>
+  // --- Musiktheorie -------------------------------------------------------
+  const LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+  const LETTER_PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  const ACC = { '-2': '𝄫', '-1': '♭', '0': '', '1': '♯', '2': '𝄪' };
+
+  const MODES = {
+    major: { label: 'Dur', suffix: '-Dur', steps: [2, 2, 1, 2, 2, 2, 1],
+             roots: ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'] },
+    minor: { label: 'Moll', suffix: '-Moll', steps: [2, 1, 2, 2, 1, 2, 2],
+             roots: ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'] },
+  };
+
+  const TRIADS = {
+    '4,3': { label: 'Dur', sym: '', lower: false, rsuf: '' },
+    '3,4': { label: 'Moll', sym: 'm', lower: true, rsuf: '' },
+    '3,3': { label: 'vermindert', sym: '°', lower: true, rsuf: '°' },
+    '4,4': { label: 'übermäßig', sym: '+', lower: false, rsuf: '+' },
+  };
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
+  const TONE_NAMES = ['Grundton', 'Terz', 'Quinte'];
+
+  function parseNote(str) {
+    const letter = str[0];
+    const acc = (str.match(/#/g) || []).length - (str.match(/b/g) || []).length;
+    return { letter, acc, pc: (LETTER_PC[letter] + acc + 12) % 12 };
+  }
+
+  // Deutsche Schreibweise: H statt B, B statt B♭
+  function noteName(n) {
+    if (n.letter === 'B' && n.acc === 0) return 'H';
+    if (n.letter === 'B' && n.acc === -1) return 'B';
+    return n.letter + ACC[n.acc];
+  }
+
+  function buildScale(root, steps) {
+    const notes = [root];
+    let li = LETTERS.indexOf(root.letter), pc = root.pc;
+    for (let i = 0; i < 6; i++) {
+      pc = (pc + steps[i]) % 12;
+      li = (li + 1) % 7;
+      const letter = LETTERS[li];
+      let acc = pc - LETTER_PC[letter];
+      if (acc > 6) acc -= 12;
+      if (acc < -6) acc += 12;
+      notes.push({ letter, acc, pc });
+    }
+    return notes;
+  }
+
+  function buildChords(scale) {
+    return scale.map((_, d) => {
+      const notes = [0, 2, 4].map(o => scale[(d + o) % 7]);
+      const intervals = [1, 2].map(i => (notes[i].pc - notes[i - 1].pc + 12) % 12);
+      const q = TRIADS[intervals.join(',')];
+      let roman = q.lower ? ROMAN[d].toLowerCase() : ROMAN[d];
+      roman += q.rsuf;
+      // Töne auf die Klaviatur legen: Grundton in der ersten Oktave (C4 = 60)
+      const midis = [60 + notes[0].pc];
+      intervals.forEach(iv => midis.push(midis[midis.length - 1] + iv));
+      return { degree: d, notes, quality: q, roman, name: noteName(notes[0]) + q.sym, midis };
+    });
+  }
+
+  // --- Zustand ------------------------------------------------------------
+  const state = { mode: 'major', root: 0, chord: 0 };
+  let scale = [], chords = [];
+
+  function recompute() {
+    const mode = MODES[state.mode];
+    scale = buildScale(parseNote(mode.roots[state.root]), mode.steps);
+    chords = buildChords(scale);
+  }
+
+  // --- Rendering ----------------------------------------------------------
+  const $ = id => document.getElementById(id);
+
+  function renderModes() {
+    $('modes').innerHTML = Object.entries(MODES).map(([k, m]) =>
+      `<button data-mode="${k}" class="${k === state.mode ? 'active' : ''}">${m.label}</button>`).join('');
+  }
+
+  function renderRoots() {
+    const mode = MODES[state.mode];
+    $('roots').innerHTML = mode.roots.map((r, i) =>
+      `<button data-root="${i}" class="${i === state.root ? 'active' : ''}">${noteName(parseNote(r))}</button>`).join('');
+    const mode_ = MODES[state.mode];
+    let name = noteName(scale[0]);
+    if (state.mode === 'minor') name = name.toLowerCase();
+    $('keyname').innerHTML = `${name}${mode_.suffix}<span>Tonleiter: ${scale.map(noteName).join(' · ')}</span>`;
+  }
+
+  function renderChords() {
+    $('chords').innerHTML = chords.map((c, i) => `
+      <button class="chord ${i === state.chord ? 'active' : ''}" data-chord="${i}">
+        <span class="roman">${c.roman}</span>
+        <span class="name">${c.name}</span>
+        <span class="notes">${c.notes.map(noteName).join(' ')}</span>
+      </button>`).join('');
+  }
+
+  function renderDetail() {
+    const c = chords[state.chord];
+    $('detail').innerHTML = `<b>${c.name}</b> ${c.quality.label} · Stufe ${c.roman}<br>` +
+      c.notes.map((n, i) => `<span class="tone">${noteName(n)}<small>${TONE_NAMES[i]}</small></span>`).join('');
+  }
+
+  const LOW = 60, HIGH = 84; // C4 bis C6
+  const WHITE_PCS = [0, 2, 4, 5, 7, 9, 11];
+
+  function buildKeyboard() {
+    const kb = $('keyboard');
+    let html = '', whiteIndex = 0;
+    for (let m = LOW; m <= HIGH; m++) {
+      const pc = m % 12;
+      if (WHITE_PCS.includes(pc)) {
+        html += `<div class="key white" data-midi="${m}"><span class="lab"></span></div>`;
+        whiteIndex++;
+      } else {
+        html += `<div class="key black" data-midi="${m}" style="left: calc(100% / 15 * ${whiteIndex})"><span class="lab"></span></div>`;
+      }
+    }
+    kb.innerHTML = html;
+  }
+
+  function renderKeyboard() {
+    const c = chords[state.chord];
+    document.querySelectorAll('#keyboard .key').forEach(k => {
+      const m = +k.dataset.midi;
+      const idx = c.midis.indexOf(m);
+      k.classList.toggle('on', idx >= 0);
+      k.classList.toggle('root', idx === 0);
+      const lab = k.querySelector('.lab');
+      if (idx >= 0) lab.textContent = noteName(c.notes[idx]);
+      else if (m % 12 === 0) lab.textContent = 'C' + (Math.floor(m / 12) - 1);
+      else lab.textContent = '';
+    });
+  }
+
+  function renderAll() {
+    recompute();
+    renderModes();
+    renderRoots();
+    renderChords();
+    renderDetail();
+    renderKeyboard();
+  }
+
+  // --- Interaktion --------------------------------------------------------
+  $('modes').addEventListener('click', e => {
+    const b = e.target.closest('[data-mode]');
+    if (!b) return;
+    state.mode = b.dataset.mode;
+    renderAll();
+  });
+  $('roots').addEventListener('click', e => {
+    const b = e.target.closest('[data-root]');
+    if (!b) return;
+    state.root = +b.dataset.root;
+    renderAll();
+  });
+  $('chords').addEventListener('click', e => {
+    const b = e.target.closest('[data-chord]');
+    if (!b) return;
+    state.chord = +b.dataset.chord;
+    renderChords();
+    renderDetail();
+    renderKeyboard();
+  });
+
+  buildKeyboard();
+  renderAll();
+</script>
+</body>
+</html>
