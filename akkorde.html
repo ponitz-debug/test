@@ -64,16 +64,23 @@
     .setting .row + .row { margin-top: 0.5rem; }
     @media (max-width: 520px) { .setting { grid-template-columns: 1fr; } .setting .label { padding-top: 0; } }
 
+    .editor-wrap { grid-column: 2; margin-top: 0.6rem; display: grid; grid-template-columns: minmax(0, 560px) minmax(220px, 320px); gap: 0.8rem; align-items: start; }
     .editor {
-      grid-column: 2; margin-top: 0.6rem; padding: 0.9rem 1rem; background: var(--surface); border: 1px solid var(--line);
-      border-radius: 10px; display: grid; gap: 0.6rem; max-width: 560px;
+      padding: 0.9rem 1rem; background: var(--surface); border: 1px solid var(--line);
+      border-radius: 10px; display: grid; gap: 0.6rem; min-width: 0;
     }
-    .editor h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 600; }
+    .tryout { padding: 0.9rem 1rem; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; display: grid; gap: 0.6rem; }
+    .tryout .keyboard { height: 120px; cursor: pointer; }
+    .tryout .key.white:not(.on) .lab { display: block; }
+    .tryout .hint { font-size: 0.8rem; color: var(--muted); }
+    .key.pressed { background: var(--accent) !important; }
+    @media (max-width: 860px) { .editor-wrap { grid-template-columns: 1fr; } }
+    .editor h3, .editor-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 600; }
     .editor .param { display: grid; grid-template-columns: 120px 1fr 64px; gap: 0.6rem; align-items: center; font-size: 0.9rem; }
     .editor .param output { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
     .editor input[type=range] { width: 100%; accent-color: var(--accent); }
     .editor .actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.2rem; }
-    @media (max-width: 520px) { .editor { grid-column: 1; } .editor .param { grid-template-columns: 90px 1fr 56px; } }
+    @media (max-width: 520px) { .editor-wrap { grid-column: 1; } .editor .param { grid-template-columns: 90px 1fr 56px; } }
 
     .keyname { font-size: 1.4rem; margin-top: 0.4rem; }
     .keyname span { color: var(--muted); font-size: 1rem; margin-left: 0.6rem; }
@@ -201,7 +208,14 @@
         <select id="instrument" aria-label="Instrument"></select>
         <button id="editInstrument" type="button" class="small">Bearbeiten</button>
       </div>
-      <div class="editor" id="editor" hidden></div>
+      <div class="editor-wrap" id="editorWrap" hidden>
+        <div class="editor" id="editor"></div>
+        <div class="tryout">
+          <h3 class="editor-title">Einzelne Töne anschlagen</h3>
+          <div class="keyboard" id="tryout"></div>
+          <div class="hint">Eine Oktave ab C4, spielt mit dem gewählten Instrument.</div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -470,13 +484,16 @@
     $('editInstrument').disabled = state.sound !== 'on';
     $('editInstrument').classList.toggle('active', state.editing);
     renderEditor();
+    $('tryout').querySelectorAll('.key.white .lab').forEach((lab, i) => {
+      lab.textContent = noteName({ letter: LETTERS[i % 7], acc: 0 });
+    });
   }
 
 
   function renderEditor() {
     const ed = $('editor');
-    ed.hidden = !(state.editing && state.sound === 'on');
-    if (ed.hidden) return;
+    $('editorWrap').hidden = !(state.editing && state.sound === 'on');
+    if ($('editorWrap').hidden) return;
     const ins = INSTRUMENTS[state.instrument];
     ed.innerHTML = `<h3>${ins.label} bearbeiten</h3>` + PARAMS.map(p => `
       <label class="param">
@@ -542,10 +559,9 @@
   const KB_OCTAVES = 4;
   let kbLow = -1;
 
-  function buildKeyboard(low) {
-    kbLow = low;
+  function keyboardHtml(low, octaves) {
     let html = '', whiteIndex = 0;
-    for (let m = low; m < low + 12 * KB_OCTAVES; m++) {
+    for (let m = low; m < low + 12 * octaves + 1; m++) {
       if (WHITE_PCS.includes(m % 12)) {
         html += `<div class="key white" data-midi="${m}"><span class="lab"></span></div>`;
         whiteIndex++;
@@ -553,15 +569,36 @@
         html += `<div class="key black" data-midi="${m}" style="left: calc(100% / var(--whites) * ${whiteIndex})"><span class="lab"></span></div>`;
       }
     }
-    $('keyboard').style.setProperty('--whites', 7 * KB_OCTAVES);
-    $('keyboard').innerHTML = html;
+    return html;
+  }
+  function buildKeyboard(low) {
+    kbLow = low;
+    $('keyboard').style.setProperty('--whites', 7 * KB_OCTAVES + 1);
+    $('keyboard').innerHTML = keyboardHtml(low, KB_OCTAVES);
+  }
+  // Probier-Klaviatur im Editor: eine Oktave ab C4, jede Taste spielt einen Einzelton
+  function buildTryout() {
+    const el = $('tryout');
+    el.style.setProperty('--whites', 8);
+    el.innerHTML = keyboardHtml(60, 1);
+    el.querySelectorAll('.key').forEach(k => {
+      const m = +k.dataset.midi;
+      const pc = m % 12;
+      k.querySelector('.lab').textContent = WHITE_PCS.includes(pc) ? ['C', 'D', 'E', 'F', 'G', 'A', 'B'][WHITE_PCS.indexOf(pc)] : '';
+    });
+  }
+  function pressKey(k) {
+    const m = +k.dataset.midi;
+    playChord([m]);
+    k.classList.add('pressed');
+    setTimeout(() => k.classList.remove('pressed'), 180);
   }
 
   function renderKeyboard() {
     const c = currentChord();
     let low = 36; // C2
     const hi = Math.max(...c.midis), lo = Math.min(...c.midis);
-    while (hi >= low + 12 * KB_OCTAVES) low += 12;
+    while (hi > low + 12 * KB_OCTAVES) low += 12;
     while (lo < low) low -= 12;
     if (low !== kbLow) buildKeyboard(low);
     document.querySelectorAll('#keyboard .key').forEach(k => {
@@ -629,6 +666,10 @@
     }
     if (e.target.id === 'closeEditor') { state.editing = false; renderSettings(); }
   });
+  ['tryout', 'keyboard'].forEach(id => $(id).addEventListener('pointerdown', e => {
+    const k = e.target.closest('.key');
+    if (k) pressKey(k);
+  }));
   $('instrument').addEventListener('change', e => {
     state.instrument = e.target.value;
     try { localStorage.setItem('akkordkompass.instrument', state.instrument); } catch (e2) {}
@@ -657,6 +698,7 @@
   $('octDown').addEventListener('click', () => { if (state.mpcOctave > -2) { state.mpcOctave--; recompute(); renderSelection(); } });
   $('octUp').addEventListener('click', () => { if (state.mpcOctave < 3) { state.mpcOctave++; recompute(); renderSelection(); } });
 
+  buildTryout();
   renderAll();
 </script>
 </body>
