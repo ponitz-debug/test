@@ -456,12 +456,29 @@
 
   // --- Klang (Web Audio) --------------------------------------------------
   let audio = null;
+  function getAudio() {
+    try {
+      if (!audio) {
+        audio = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+        // Stiller Puffer: entsperrt iOS und hält den Kontext aktiv
+        const buf = audio.createBuffer(1, 1, audio.sampleRate);
+        const src = audio.createBufferSource();
+        src.buffer = buf;
+        src.connect(audio.destination);
+        src.start(0);
+      }
+      if (audio.state === 'suspended') audio.resume();
+      return audio;
+    } catch (e) { return null; }
+  }
+  // Bei der ersten Berührung vorwärmen, damit der erste Ton nicht verzögert kommt
+  ['pointerdown', 'keydown', 'touchstart'].forEach(ev =>
+    document.addEventListener(ev, () => { if (state.sound === 'on') getAudio(); }, { capture: true, passive: true }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && audio) audio.resume(); });
+
   function playChord(midis) {
     if (state.sound !== 'on') return;
-    try {
-      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-      if (audio.state === 'suspended') audio.resume();
-    } catch (e) { return; }
+    if (!getAudio()) return;
     const ins = INSTRUMENTS[state.instrument];
     const now = audio.currentTime;
     const master = audio.createGain();
@@ -655,6 +672,7 @@
   function pressKey(k) {
     const m = +k.dataset.midi;
     playChord([m]);
+    if (state.sound !== 'on') return;
     k.classList.add('pressed');
     setTimeout(() => k.classList.remove('pressed'), 180);
   }
@@ -756,20 +774,25 @@
     renderEditor();
   });
 
-  $('chords').addEventListener('click', e => {
-    const b = e.target.closest('[data-chord]');
-    if (!b) return;
-    state.chord = +b.dataset.chord;
-    renderSelection();
-    playChord(currentChord().midis);
-  });
-  $('mpcpads').addEventListener('click', e => {
-    const b = e.target.closest('[data-pad]');
-    if (!b) return;
-    state.pad = +b.dataset.pad;
-    renderSelection();
-    playChord(currentChord().midis);
-  });
+  // Akkorde und Pads reagieren schon beim Drücken (pointerdown), nicht erst beim Loslassen;
+  // der click-Handler bleibt nur für Tastaturbedienung (Enter/Leertaste, e.detail === 0).
+  function selectAndPlay(attr, apply) {
+    return e => {
+      const b = e.target.closest(`[data-${attr}]`);
+      if (!b) return;
+      if (e.type === 'click' && e.detail !== 0) return;
+      if (e.type === 'pointerdown' && e.button !== 0) return;
+      apply(+b.dataset[attr]);
+      playChord(currentChord().midis);
+      renderSelection();
+    };
+  }
+  const onChord = selectAndPlay('chord', v => { state.chord = v; });
+  const onPad = selectAndPlay('pad', v => { state.pad = v; });
+  $('chords').addEventListener('pointerdown', onChord);
+  $('chords').addEventListener('click', onChord);
+  $('mpcpads').addEventListener('pointerdown', onPad);
+  $('mpcpads').addEventListener('click', onPad);
   const setFormula = f => { state.formula = f; recompute(); renderSelection(); };
   $('listChord').addEventListener('change', e => setFormula(e.target.value));
   $('mpcChord').addEventListener('change', e => setFormula(e.target.value));
