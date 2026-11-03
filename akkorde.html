@@ -178,18 +178,23 @@
       background: var(--black-key); z-index: 2; border-radius: 0 0 3px 3px;
       margin-left: calc(100% / var(--whites) * -0.3);
     }
-    /* Tonleiter-Klaviatur: nur Skalentöne spielbar, Rest abgedunkelt */
-    .scalekb .key.white.muted { background: #7d786d; }
-    .scalekb .key.black.muted { background: #0d0d10; opacity: 0.45; }
-    .scalekb .key.muted { cursor: default; }
-    .scalekb .key.white.inscale { background: var(--white-key); }
-    .scalekb .key.inscale .lab { color: var(--key-text); font-weight: 600; }
-    .scalekb .key.black.inscale { background: #3a3f55; }
-    .scalekb .key.black.inscale .lab { color: #fff; }
-    .scalekb .key.isroot.white { background: #ffd9d3; }
-    .scalekb .key.isroot.black { background: #8a3a32; }
-    .scalekb .key.isroot .lab { color: #b8321f; }
-    .scalekb .key.black.isroot .lab { color: #ffd9d3; }
+    /* Tonleiter-Leiste: fortlaufende Tasten, nur Skalentöne */
+    .strip {
+      display: flex; gap: 3px; touch-action: none; user-select: none; -webkit-user-select: none;
+      cursor: pointer;
+    }
+    .strip .tile {
+      flex: 1; min-width: 0; height: 110px; border-radius: 6px; background: var(--white-key);
+      display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+      padding-bottom: 8px; color: var(--key-text); font-weight: 600; font-size: 0.85rem;
+      border-bottom: 4px solid #c9c4b8; transition: background 0.08s;
+    }
+    .strip .tile small { font-size: 0.65rem; font-weight: 400; color: #8a8478; }
+    .strip .tile.isroot { background: #ffd9d3; border-bottom-color: #e29a90; color: #b8321f; }
+    .strip .tile.isroot small { color: #c9776b; }
+    .strip .tile.pressed { background: var(--accent); border-bottom-color: #c48c1f; color: var(--key-text); }
+    .strip .tile.octave-start { margin-left: 6px; }
+    @media (max-width: 700px) { .strip { gap: 2px; } .strip .tile { height: 90px; font-size: 0.7rem; } .strip .tile small { display: none; } }
     .key.on { background: var(--accent); }
     .key.on.root { background: var(--root); }
     .key .lab {
@@ -297,7 +302,7 @@
   <section>
     <h2>Tonleiter-Klaviatur</h2>
     <div class="detail" id="scaleDetail"></div>
-    <div class="keyboard scalekb" id="scaleKeyboard"></div>
+    <div class="strip" id="scaleKeyboard"></div>
   </section>
 </main>
 
@@ -738,26 +743,34 @@
     if (k.classList.contains('muted')) return;
     const m = +k.dataset.midi;
     playChord([m]);
-    if (state.sound !== 'on') return;
-    k.classList.add('pressed');
-    setTimeout(() => k.classList.remove('pressed'), 180);
+    flash(k);
+    // Auf der klassischen Klaviatur denselben Ton kurz aufleuchten lassen
+    if (!k.closest('#keyboard')) {
+      const mirror = $('keyboard').querySelector(`.key[data-midi="${m}"]`);
+      if (mirror) flash(mirror, 350);
+    }
+  }
+  function flash(el, ms = 180) {
+    el.classList.add('pressed');
+    clearTimeout(el._flash);
+    el._flash = setTimeout(() => el.classList.remove('pressed'), ms);
   }
 
+  // Tonleiter-Leiste: Skalentöne fortlaufend ab dem Grundton, so viele Oktaven wie die Klaviatur
   function renderScaleKeyboard() {
     const el = $('scaleKeyboard');
-    const low = KB_OCTAVES >= 4 ? 36 : 48;
-    el.style.setProperty('--whites', 7 * KB_OCTAVES + 1);
-    el.innerHTML = keyboardHtml(low, KB_OCTAVES);
-    const byPc = {};
-    scale.forEach(n => { byPc[n.pc] = n; });
-    el.querySelectorAll('.key').forEach(k => {
-      const m = +k.dataset.midi, n = byPc[m % 12];
-      k.classList.toggle('inscale', !!n);
-      k.classList.toggle('muted', !n);
-      k.classList.toggle('isroot', !!n && n.pc === scale[0].pc);
-      k.querySelector('.lab').textContent = n ? noteName(n) : (m % 12 === 0 ? 'C' + octaveOf(m) : '');
-    });
-    $('scaleDetail').innerHTML = `<b>${scale.map(n => noteName(n)).join(' ')}</b> nur die ${scale.length} Töne der Tonleiter, Grundton rötlich`;
+    const steps = MODES[state.mode].steps;
+    const octaves = KB_OCTAVES >= 4 ? 3 : 2;
+    const rootMidi = (KB_OCTAVES >= 4 ? 36 : 48) + scale[0].pc;
+    let html = '';
+    for (let i = 0; i <= scale.length * octaves; i++) {
+      const n = scale[i % scale.length];
+      const m = scaleMidi(steps, rootMidi, i);
+      const cls = ['tile', i % scale.length === 0 ? 'isroot' : '', i > 0 && i % scale.length === 0 ? 'octave-start' : ''].join(' ');
+      html += `<div class="${cls}" data-midi="${m}">${noteName(n)}<small>${octaveOf(m)}</small></div>`;
+    }
+    el.innerHTML = html;
+    $('scaleDetail').innerHTML = `<b>${scale.map(n => noteName(n)).join(' ')}</b> ${scale.length} Töne, fortlaufend ab ${noteName(scale[0])}${octaveOf(rootMidi)}; Grundton rötlich`;
   }
 
   function renderKeyboard() {
@@ -835,7 +848,7 @@
     const el = $(id);
     let lastKey = null;
     el.addEventListener('pointerdown', e => {
-      const k = e.target.closest('.key');
+      const k = e.target.closest('.key, .tile');
       if (!k) return;
       e.preventDefault();
       lastKey = k;
@@ -844,7 +857,7 @@
     el.addEventListener('pointermove', e => {
       if (!lastKey) return;
       if (e.pointerType === 'mouse' && !(e.buttons & 1)) return;
-      const k = document.elementFromPoint(e.clientX, e.clientY)?.closest('.key');
+      const k = document.elementFromPoint(e.clientX, e.clientY)?.closest('.key, .tile');
       if (k && k !== lastKey && el.contains(k)) { lastKey = k; pressKey(k); }
     });
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => el.addEventListener(ev, () => { lastKey = null; }));
